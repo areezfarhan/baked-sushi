@@ -4,12 +4,11 @@ import Product from './pages/Product'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import Confirmation from './pages/Confirmation'
-import AdminInventory from './pages/AdminInventory'
-
-// Import new Admin components
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
-import ProtectedRoute from './components/ProtectedRoute' // Make sure this path is correct
+import AdminHistory from './pages/AdminHistory' // Add this
+import AdminInventory from './pages/AdminInventory'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
@@ -26,6 +25,11 @@ function App() {
       <Route path="/admin/dashboard" element={
         <ProtectedRoute>
           <AdminDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/history" element={
+        <ProtectedRoute>
+          <AdminHistory />
         </ProtectedRoute>
       } />
       <Route path="/admin/inventory" element={

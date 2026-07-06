@@ -65,12 +65,10 @@ export default function Checkout() {
       } else if (data.status === 'success') {
         // --- START: TRIGGER ADMIN EMAIL ---
         try {
+          // Send order reference so the edge function can fetch full details
           const { data: emailData, error: emailError } = await supabase.functions.invoke('send-order-email', {
             body: {
-              customer_name: name,
-              order_reference: data.order_reference,
-              total_amount: total,
-              delivery_date: cartItems[0].date
+              order_reference: data.order_reference
             }
           })
 

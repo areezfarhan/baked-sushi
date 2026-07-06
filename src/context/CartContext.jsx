@@ -1,22 +1,43 @@
 import { createContext, useState, useContext } from 'react'
 
-// Create the context
 const CartContext = createContext()
 
-// Create the Provider (this holds the actual data)
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([])
 
-  const addToCart = (product, date, quantity) => {
-    // Rule: One checkout = one delivery date
+  const addToCart = (product, date, quantity, maxAllowed) => {
     if (cartItems.length > 0 && cartItems[0].date !== date) {
-      alert("You can only order for one delivery date at a time! Please checkout or clear your cart first.")
-      return
+      alert("You can only order for one delivery date at a time!")
+      return false
     }
-    
-    // Add the item
-    setCartItems([...cartItems, { product, date, quantity }])
-    alert(`${product.name} added to cart!`)
+
+    const existingItemIndex = cartItems.findIndex(
+      (item) => item.product.id === product.id && item.date === date
+    )
+
+    if (existingItemIndex > -1) {
+      const currentQuantity = cartItems[existingItemIndex].quantity
+      const newTotal = currentQuantity + quantity
+      
+      // Check if new total exceeds maxAllowed (Database Stock)
+      if (newTotal > maxAllowed) {
+        alert(`Cannot add ${quantity}. You have ${currentQuantity} in cart. Max allowed: ${maxAllowed}`)
+        return false
+      }
+      
+      const updatedCart = [...cartItems]
+      updatedCart[existingItemIndex].quantity = newTotal
+      setCartItems(updatedCart)
+      return true
+    } else {
+      if (quantity > maxAllowed) {
+        alert(`Cannot add ${quantity}. Max allowed: ${maxAllowed}`)
+        return false
+      }
+      
+      setCartItems([...cartItems, { product, date, quantity }])
+      return true
+    }
   }
 
   const clearCart = () => setCartItems([])
@@ -28,5 +49,4 @@ export function CartProvider({ children }) {
   )
 }
 
-// Custom hook to easily use the cart in other files
 export const useCart = () => useContext(CartContext)

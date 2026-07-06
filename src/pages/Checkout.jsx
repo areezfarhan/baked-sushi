@@ -22,7 +22,7 @@ export default function Checkout() {
 
   const total = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
 
-    const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
 
@@ -63,8 +63,29 @@ export default function Checkout() {
         alert(`Sold out! ${data.message || 'Please try another date.'}`)
         setIsSubmitting(false)
       } else if (data.status === 'success') {
-        clearCart() // Empty the cart
-        navigate(`/confirmation/${data.order_reference}`) // Go to success page
+        // --- START: TRIGGER ADMIN EMAIL ---
+        try {
+          const { data: emailData, error: emailError } = await supabase.functions.invoke('send-order-email', {
+            body: {
+              customer_name: name,
+              order_reference: data.order_reference,
+              total_amount: total,
+              delivery_date: cartItems[0].date
+            }
+          })
+
+          if (emailError) {
+            console.error('Failed to send admin email:', emailError)
+          } else {
+            console.log('Admin email sent successfully!')
+          }
+        } catch (err) {
+          console.error('Edge function error:', err)
+        }
+        // --- END: TRIGGER ADMIN EMAIL ---
+
+        clearCart()
+        navigate(`/confirmation/${data.order_reference}`)
       } else {
         alert('An unexpected error occurred.')
         setIsSubmitting(false)
@@ -80,7 +101,7 @@ export default function Checkout() {
   return (
     <div>
       <h1>Checkout</h1>
-      
+
       <h3>Order Summary</h3>
       <p>Date: {cartItems[0].date}</p>
       <ul>
@@ -89,12 +110,12 @@ export default function Checkout() {
         ))}
       </ul>
       <h3>Total: RM{total}</h3>
-      
+
       <hr />
-      
+
       <h2>Customer Details</h2>
       <form onSubmit={handleSubmit}>
-        
+
         <label>Full Name:</label><br />
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} required /><br /><br />
 
@@ -102,17 +123,17 @@ export default function Checkout() {
         <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required /><br /><br />
 
         <label>Delivery Type:</label><br />
-        <input 
-          type="radio" 
-          value="pickup" 
-          checked={deliveryType === 'pickup'} 
-          onChange={(e) => setDeliveryType(e.target.value)} 
+        <input
+          type="radio"
+          value="pickup"
+          checked={deliveryType === 'pickup'}
+          onChange={(e) => setDeliveryType(e.target.value)}
         /> Pickup
-        <input 
-          type="radio" 
-          value="delivery" 
-          checked={deliveryType === 'delivery'} 
-          onChange={(e) => setDeliveryType(e.target.value)} 
+        <input
+          type="radio"
+          value="delivery"
+          checked={deliveryType === 'delivery'}
+          onChange={(e) => setDeliveryType(e.target.value)}
         /> Delivery<br /><br />
 
         {deliveryType === 'delivery' && (
@@ -133,17 +154,17 @@ export default function Checkout() {
         <br />
 
         <label>Upload Receipt (JPG, PNG, PDF):</label><br />
-        <input 
-          type="file" 
-          accept=".jpg,.png,.pdf" 
-          onChange={(e) => setReceipt(e.target.files[0])} 
-          required 
+        <input
+          type="file"
+          accept=".jpg,.png,.pdf"
+          onChange={(e) => setReceipt(e.target.files[0])}
+          required
         /><br />
         <p><i>Please ensure your receipt is clear before submitting.</i></p>
         <br />
 
         <button type="submit" disabled={isSubmitting}>
-         {isSubmitting ? 'Submitting...' : 'Submit Order'}
+          {isSubmitting ? 'Submitting...' : 'Submit Order'}
         </button>
       </form>
     </div>
@@ -157,7 +178,7 @@ const handleSubmit = async (e) => {
 
   try {
     console.log('Starting upload...') // Debug log 2
-    
+
     // 1. Upload the receipt
     const fileExt = receipt.name.split('.').pop()
     const fileName = `${Date.now()}.${fileExt}`

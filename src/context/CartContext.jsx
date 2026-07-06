@@ -7,7 +7,7 @@ export function CartProvider({ children }) {
 
   const addToCart = (product, date, quantity, maxAllowed) => {
     if (cartItems.length > 0 && cartItems[0].date !== date) {
-      alert("You can only order for one delivery date at a time!")
+      alert("You can only order for one delivery date at a time! Please checkout or clear your cart first.")
       return false
     }
 
@@ -18,23 +18,21 @@ export function CartProvider({ children }) {
     if (existingItemIndex > -1) {
       const currentQuantity = cartItems[existingItemIndex].quantity
       const newTotal = currentQuantity + quantity
-      
-      // Check if new total exceeds maxAllowed (Database Stock)
+
       if (newTotal > maxAllowed) {
-        alert(`Cannot add ${quantity}. You have ${currentQuantity} in cart. Max allowed: ${maxAllowed}`)
+        alert(`Cannot add ${quantity} more. You already have ${currentQuantity} in cart. Maximum allowed: ${maxAllowed}`)
         return false
       }
-      
+
       const updatedCart = [...cartItems]
       updatedCart[existingItemIndex].quantity = newTotal
       setCartItems(updatedCart)
       return true
     } else {
       if (quantity > maxAllowed) {
-        alert(`Cannot add ${quantity}. Max allowed: ${maxAllowed}`)
+        alert(`Cannot add ${quantity}. Maximum allowed: ${maxAllowed}`)
         return false
       }
-      
       setCartItems([...cartItems, { product, date, quantity }])
       return true
     }
@@ -42,8 +40,33 @@ export function CartProvider({ children }) {
 
   const clearCart = () => setCartItems([])
 
+  // NEW: Remove entire item from cart
+  const removeFromCart = (productId, date) => {
+    setCartItems(prevItems => 
+      prevItems.filter(item => !(item.product.id === productId && item.date === date))
+    )
+  }
+
+  // NEW: Decrease quantity by 1 (removes item if it hits 0)
+  const decreaseQuantity = (productId, date) => {
+    setCartItems(prevItems => {
+      return prevItems.map(item => {
+        if (item.product.id === productId && item.date === date) {
+          return { ...item, quantity: item.quantity - 1 }
+        }
+        return item
+      }).filter(item => item.quantity > 0) // Auto-removes if quantity hits 0
+    })
+  }
+
   return (
-    <CartContext.Provider value={{ cartItems, addToCart, clearCart }}>
+    <CartContext.Provider value={{ 
+      cartItems, 
+      addToCart, 
+      clearCart,
+      removeFromCart,
+      decreaseQuantity
+    }}>
       {children}
     </CartContext.Provider>
   )

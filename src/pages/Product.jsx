@@ -14,7 +14,7 @@ const formatDate = (date) => {
 }
 
 export default function Product() {
-  const { id } = useParams() // This is a UUID string, NOT an integer
+  const { id } = useParams()
   const { cartItems, addToCart } = useCart()
   const [product, setProduct] = useState(null)
   const [selectedDate, setSelectedDate] = useState('')
@@ -22,6 +22,9 @@ export default function Product() {
   const [remainingStock, setRemainingStock] = useState(0)
   const [loading, setLoading] = useState(true)
   const [availableDates, setAvailableDates] = useState([])
+  
+  // NEW: Track exact stock levels for coloring
+  const [stockLevels, setStockLevels] = useState({}) 
 
   useEffect(() => {
     if (id) {
@@ -42,7 +45,7 @@ export default function Product() {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('id', id) // Use UUID directly, no parseInt
+        .eq('id', id)
         .single()
       
       if (error) {
@@ -64,10 +67,11 @@ export default function Product() {
     try {
       const today = new Date().toISOString().split('T')[0]
       
+      // UPDATED: Fetch both date and remaining_stock
       const { data, error } = await supabase
         .from('stock_by_date')
-        .select('date')
-        .eq('product_id', id) // Use UUID directly
+        .select('date, remaining_stock')
+        .eq('product_id', id)
         .gte('date', today)
         .gt('remaining_stock', 0)
 
@@ -77,7 +81,15 @@ export default function Product() {
       }
 
       if (data) {
+        // Keep the array for the filter logic (preserves existing progress)
         setAvailableDates(data.map(d => d.date))
+        
+        // NEW: Create a map of date -> stock for coloring
+        const levels = {}
+        data.forEach(d => {
+          levels[d.date] = d.remaining_stock
+        })
+        setStockLevels(levels)
       }
     } catch (err) {
       console.error('Unexpected error fetching dates:', err)
@@ -94,7 +106,7 @@ export default function Product() {
       const { data, error } = await supabase
         .from('stock_by_date')
         .select('remaining_stock')
-        .eq('product_id', id) // Use UUID directly
+        .eq('product_id', id)
         .eq('date', selectedDate)
         .single()
 
@@ -104,7 +116,6 @@ export default function Product() {
         return
       }
 
-      // Calculate what's already in cart for this product + date
       const cartItemsForThisProduct = cartItems.filter(item => 
         item.product.id === id && item.date === selectedDate
       )
@@ -113,7 +124,6 @@ export default function Product() {
         sum + item.quantity, 0
       )
 
-      // Show available stock (database stock - cart items)
       const availableStock = data.remaining_stock - alreadyInCart
       setRemainingStock(Math.max(0, availableStock))
     } catch (err) {
@@ -129,7 +139,6 @@ export default function Product() {
     }
     
     try {
-      // Re-fetch database stock to prevent race conditions
       const { data: stockData, error } = await supabase
         .from('stock_by_date')
         .select('remaining_stock')
@@ -144,12 +153,10 @@ export default function Product() {
       
       const databaseStock = stockData.remaining_stock
       
-      // Calculate what's already in cart
       const existingInCart = cartItems
         .filter(item => item.product.id === id && item.date === selectedDate)
         .reduce((sum, item) => sum + item.quantity, 0)
       
-      // Check if we can add this quantity
       const maxCanAdd = databaseStock - existingInCart
       
       if (maxCanAdd <= 0) {
@@ -162,7 +169,6 @@ export default function Product() {
         return
       }
       
-      // All validations passed - add to cart
       addToCart(product, selectedDate, quantity, databaseStock)
     } catch (err) {
       console.error('Error in handleAddToCart:', err)
@@ -181,6 +187,25 @@ export default function Product() {
 
     const dateString = formatDate(date)
     return !availableDates.includes(dateString)
+  }
+
+  // NEW: Logic for coloring the calendar days
+  const getDayClassName = (date) => {
+    const dateString = formatDate(date)
+    const todayStr = new Date().toISOString().split('T')[0]
+    
+    // Don't color past dates (they are already disabled/greyed out by default)
+    if (dateString < todayStr) return ''
+
+    // If date has no stock, make it reddish
+    if (!availableDates.includes(dateString)) {
+      return 'react-datepicker__day--unavailable'
+    }
+    
+    // Color based on stock level
+    const stock = stockLevels[dateString]
+    if (stock >= 5) return 'react-datepicker__day--high-stock' // Green
+    return 'react-datepicker__day--low-stock' // Yellow (1-4)
   }
 
   if (loading) {
@@ -207,6 +232,41 @@ export default function Product() {
 
   return (
     <div style={{ padding: '20px' }}>
+      {/* NEW: Inject custom styles for the calendar colors */}
+      <style>{`
+        .react-datepicker__day--unavailable {
+          background-color: #fee2e2 !important;
+          color: #ef4444 !important;
+          cursor: not-allowed !important;
+        }
+        .react-datepicker__day--unavailable:hover {
+          background-color: #fee2e2 !important;
+          color: #ef4444 !important;
+        }
+        .react-datepicker__day--high-stock {
+          background-color: #dcfce7 !important;
+          color: #166534 !important;
+          font-weight: 600;
+        }
+        .react-datepicker__day--high-stock:hover {
+          background-color: #bbf7d0 !important;
+        }
+        .react-datepicker__day--low-stock {
+          background-color: #fef9c3 !important;
+          color: #854d0e !important;
+          font-weight: 600;
+        }
+        .react-datepicker__day--low-stock:hover {
+          background-color: #fef08a !important;
+        }
+        /* Ensure selected day still looks selected */
+        .react-datepicker__day--selected.react-datepicker__day--high-stock,
+        .react-datepicker__day--selected.react-datepicker__day--low-stock {
+          background-color: #22c55e !important;
+          color: white !important;
+        }
+      `}</style>
+
       <Link to="/">← Back to Menu</Link>
       
       <h1>{product.name}</h1>
@@ -226,6 +286,7 @@ export default function Product() {
           }
         }}
         filterDate={(date) => !isDateDisabled(date)}
+        dayClassName={getDayClassName} // NEW: Apply colors
         minDate={new Date()}
         dateFormat="dd/MM/yyyy"
         placeholderText="Select a date"

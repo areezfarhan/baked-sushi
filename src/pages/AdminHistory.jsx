@@ -338,13 +338,7 @@ export default function AdminHistory() {
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
               <span className="text-xs font-medium">Inventory</span>
             </button>
-            <button
-              onClick={() => { supabase.auth.signOut(); navigate('/admin/login') }}
-              className="flex flex-col items-center gap-1 text-gray-500 hover:text-red-600 px-4 py-2 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-              <span className="text-xs font-medium">Logout</span>
-            </button>
+          
           </div>
         </div>
       </nav>

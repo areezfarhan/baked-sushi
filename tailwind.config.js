@@ -6,29 +6,25 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        'display': ['Fredoka', 'sans-serif'],
+        'body': ['Nunito', 'sans-serif'],
+      },
       colors: {
-        // Japanese Café Warm Palette
+        primary: '#A65E44',
+        'primary-dark': '#8A4B35',
+        'text-main': '#2C2A29',
+        'text-muted': '#7A7571',
         warm: {
-          50: '#FDFBF7',  // Main background (soft off-white)
-          100: '#F5F0E6', // Secondary background (warm beige)
-          200: '#E6DCC8', // Borders, dividers
+          50: '#FDFBF7',
+          100: '#F5F0E6',
+          200: '#E6DCC8',
         },
-        primary: {
-          DEFAULT: '#A65E44', // Terracotta / Warm Clay (Buttons, primary actions)
-          dark: '#8A4B35',    // Hover states
-        },
-        accent: {
-          DEFAULT: '#6B7A53', // Muted Matcha Green (Success, stock available)
-          dark: '#556142',    // Hover states
-        },
-        text: {
-          main: '#2C2A29',    // Deep charcoal (Main text, softer than pure black)
-          muted: '#7A7571',   // Secondary text, descriptions
-        }
+        accent: '#C49A6C',
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(166, 94, 68, 0.08)', // Soft, warm shadow for cards
-      }
+        'soft': '0 4px 20px -2px rgba(166, 94, 68, 0.1)',
+      },
     },
   },
   plugins: [],

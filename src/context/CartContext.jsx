@@ -1,13 +1,21 @@
-import { createContext, useState, useContext } from 'react'
+import { createContext, useContext, useState } from 'react'
 
 const CartContext = createContext()
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([])
+  const [alert, setAlert] = useState(null)
+  const [toast, setToast] = useState(null) // NEW: Toast state
+  
+  const closeAlert = () => setAlert(null)
+  const closeToast = () => setToast(null) // NEW: Close toast
 
   const addToCart = (product, date, quantity, maxAllowed) => {
     if (cartItems.length > 0 && cartItems[0].date !== date) {
-      alert("You can only order for one delivery date at a time! Please checkout or clear your cart first.")
+      setAlert({
+        message: 'You can only order for one delivery date at a time! Please checkout or clear your cart first.',
+        type: 'warning'
+      })
       return false
     }
 
@@ -20,34 +28,47 @@ export function CartProvider({ children }) {
       const newTotal = currentQuantity + quantity
 
       if (newTotal > maxAllowed) {
-        alert(`Cannot add ${quantity} more. You already have ${currentQuantity} in cart. Maximum allowed: ${maxAllowed}`)
+        setAlert({
+          message: `Cannot add ${quantity} more. You already have ${currentQuantity} in cart. Maximum allowed: ${maxAllowed}`,
+          type: 'error'
+        })
         return false
       }
 
       const updatedCart = [...cartItems]
       updatedCart[existingItemIndex].quantity = newTotal
       setCartItems(updatedCart)
+      
+      // NEW: Show success toast
+      setToast(`Updated ${product.name} quantity!`)
       return true
     } else {
       if (quantity > maxAllowed) {
-        alert(`Cannot add ${quantity}. Maximum allowed: ${maxAllowed}`)
+        setAlert({
+          message: `Cannot add ${quantity}. Maximum allowed: ${maxAllowed}`,
+          type: 'error'
+        })
         return false
       }
       setCartItems([...cartItems, { product, date, quantity }])
+      
+      // NEW: Show success toast
+      setToast(`Added ${product.name} to cart!`)
       return true
     }
   }
 
-  const clearCart = () => setCartItems([])
+  const clearCart = () => {
+    setCartItems([])
+    closeAlert()
+  }
 
-  // NEW: Remove entire item from cart
   const removeFromCart = (productId, date) => {
-    setCartItems(prevItems => 
+    setCartItems(prevItems =>
       prevItems.filter(item => !(item.product.id === productId && item.date === date))
     )
   }
 
-  // NEW: Decrease quantity by 1 (removes item if it hits 0)
   const decreaseQuantity = (productId, date) => {
     setCartItems(prevItems => {
       return prevItems.map(item => {
@@ -55,7 +76,7 @@ export function CartProvider({ children }) {
           return { ...item, quantity: item.quantity - 1 }
         }
         return item
-      }).filter(item => item.quantity > 0) // Auto-removes if quantity hits 0
+      }).filter(item => item.quantity > 0)
     })
   }
 
@@ -63,9 +84,13 @@ export function CartProvider({ children }) {
     <CartContext.Provider value={{ 
       cartItems, 
       addToCart, 
-      clearCart,
-      removeFromCart,
-      decreaseQuantity
+      removeFromCart, 
+      decreaseQuantity, 
+      clearCart, 
+      alert, 
+      closeAlert,
+      toast,      // NEW
+      closeToast  // NEW
     }}>
       {children}
     </CartContext.Provider>

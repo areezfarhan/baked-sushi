@@ -1,4 +1,3 @@
-Here's a professional README.md for your Baked Sushi project:
 
 ```markdown
 # WARISAN OPAH ARTISAN KITCHEN

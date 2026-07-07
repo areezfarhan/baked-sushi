@@ -30,7 +30,7 @@ export default function Menu() {
         .select('*')
         .eq('active', true)
         .order('name', { ascending: true })
-      
+
       if (error) console.error('Error:', error)
       else setProducts(data)
       setLoading(false)
@@ -41,29 +41,29 @@ export default function Menu() {
   return (
     // 1. Creamy Gradient Background for the whole page
     <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6]">
-      
+
       {/* HERO SECTION - Inside a distinct box */}
       <div className="max-w-4xl mx-auto px-4 pt-6 pb-8">
         <div className="bg-white rounded-[2rem] shadow-2xl border-4 border-[#F5F0E6] relative overflow-hidden">
-          
+
           {/* Red & White Stripes at the very top of the box */}
           <div className="absolute top-0 left-0 right-0 h-4 flex">
             {Array.from({ length: 50 }).map((_, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className={`flex-1 ${i % 2 === 0 ? 'bg-[#E31E24]' : 'bg-white'}`}
               ></div>
             ))}
           </div>
 
           <div className="pt-10 pb-8 px-6 flex flex-col items-center text-center">
-            
+
             {/* Logo Container */}
             <div className="mb-4 p-3 bg-[#FDFBF7] rounded-2xl shadow-md border-2 border-dashed border-[#E31E24]/20 transform hover:scale-105 transition-transform duration-300">
-              <img 
-                src="/logo.png" 
-                alt="Opah's Cafe Logo" 
-                className="h-28 w-auto object-contain" 
+              <img
+                src="/logo.png"
+                alt="Opah's Cafe Logo"
+                className="h-28 w-auto object-contain"
               />
             </div>
 
@@ -74,7 +74,7 @@ export default function Menu() {
 
             {/* Title */}
             <h1 className="text-5xl md:text-6xl font-bold text-[#1A237E] mb-3 font-display tracking-tight">
-               Sushi Bake
+              Sushi Bake
             </h1>
 
             {/* Subtitle */}
@@ -107,7 +107,7 @@ export default function Menu() {
             {products.map((p) => {
               const proteinType = getProteinType(p.name)
               const proteinEmoji = proteinIcons[proteinType]
-              
+
               return (
                 <Link
                   key={p.id}
@@ -118,30 +118,27 @@ export default function Menu() {
                   {/* Image Area */}
                   <div className="relative h-60 bg-stone-100 overflow-hidden">
                     {p.image_url ? (
-                      <img 
-                        src={p.image_url} 
-                        alt={p.name} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                      <img
+                        src={p.image_url}
+                        alt={p.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-6xl">
                         {proteinEmoji}
                       </div>
                     )}
-                    
+
                     {/* Floating Badges */}
-                    <div className="absolute top-4 left-4 flex gap-2">
+                    <div className="absolute top-4 left-4">
                       <span className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-bold text-[#1A237E] shadow-md border border-[#1A237E]/10">
                         280g
                       </span>
-                      <span className="bg-[#E31E24] text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-md">
-                        {proteinEmoji}
-                      </span>
                     </div>
-                    
-                    {/* Price Badge */}
-                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-[#F5F0E6]">
-                      <span className="text-[#1A237E] font-bold text-lg">RM{p.price}</span>
+
+                    {/* Price Badge - Smaller and Bolder */}
+                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg border border-[#F5F0E6]">
+                      <span className="text-[#1A237E] text-sm font-extrabold">RM{Number(p.price).toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -150,16 +147,16 @@ export default function Menu() {
                     <h3 className="text-2xl font-bold text-[#1A237E] mb-2 group-hover:text-[#E31E24] transition-colors font-display">
                       {p.name}
                     </h3>
-                    
+
                     <p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3 font-body">
                       {p.description}
                     </p>
-                    
+
                     <div className="flex items-center gap-2 mb-5 text-xs text-gray-500 bg-[#FDFBF7] px-4 py-2 rounded-full border border-[#F5F0E6]">
                       <span>🌿</span>
                       <span className="font-medium">Includes Laverland Crunch Seaweed</span>
                     </div>
-                    
+
                     {/* Order Button */}
                     <button className="w-full bg-[#E31E24] text-white py-3 rounded-2xl font-bold text-base group-hover:bg-[#C41820] transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center gap-2 font-display">
                       <span>Order Now</span>

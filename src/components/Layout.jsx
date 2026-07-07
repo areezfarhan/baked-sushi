@@ -40,8 +40,8 @@ export default function Layout({ children }) {
       </main>
 
       {/* Simple Footer - Updated to match Opah's Cafe branding */}
-      <footer className="bg-[#F5F0E6] border-t border-[#E6DCC8] py-6 text-center text-gray-500 text-sm font-body">
-        <p>© {new Date().getFullYear()} Opah's Cafe. All rights reserved.</p>
+      <footer className="bg-[#F5F0E6] border-t border-[#E6DCC8] py-6 text-center text-gray-500 text-xs font-body">
+        <p>© {new Date().getFullYear()} Warisan Opah's Kitchen. All rights reserved.</p>
       </footer>
     </div>
   );

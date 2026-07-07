@@ -30,21 +30,22 @@ export default function AlertModal({ message, onClose, onConfirm, type = 'error'
     )
   }
 
+  // UPDATED: Changed warning colors from yellow to red/pink to match error style
   const bgColors = {
     error: 'bg-red-50',
-    warning: 'bg-yellow-50',
+    warning: 'bg-red-50',  // Changed from bg-yellow-50
     info: 'bg-blue-50'
   }
 
   const textColors = {
     error: 'text-red-800',
-    warning: 'text-yellow-800',
+    warning: 'text-red-800',  // Changed from text-yellow-800
     info: 'text-blue-800'
   }
 
   const borderColors = {
     error: 'border-red-200',
-    warning: 'border-yellow-200',
+    warning: 'border-red-200',  // Changed from border-yellow-200
     info: 'border-blue-200'
   }
 
@@ -91,7 +92,7 @@ export default function AlertModal({ message, onClose, onConfirm, type = 'error'
           ) : (
             <button
               onClick={onClose}
-              className={`w-full py-2.5 px-4 ${textColors[type]} bg-white/60 hover:bg-white/80 rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${type === 'error' ? 'focus:ring-red-500' : type === 'warning' ? 'focus:ring-yellow-500' : 'focus:ring-blue-500'}`}
+              className={`w-full py-2.5 px-4 ${textColors[type]} bg-white/60 hover:bg-white/80 rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${type === 'error' || type === 'warning' ? 'focus:ring-red-500' : 'focus:ring-blue-500'}`}
             >
               Got it
             </button>

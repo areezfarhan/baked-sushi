@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
+import AlertModal from '../components/AlertModal' // 👈 ADD THIS IMPORT
 
 export default function AdminInventory() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
@@ -8,17 +9,17 @@ export default function AdminInventory() {
   const [products, setProducts] = useState([])
   const [configuredDates, setConfiguredDates] = useState(new Set())
   const [loading, setLoading] = useState(false)
+  const [alert, setAlert] = useState(null) // 👈 ADD THIS STATE
   const navigate = useNavigate()
 
-  // Calculate today's date string to disable past dates
+  const closeAlert = () => setAlert(null) // 👈 ADD THIS FUNCTION
+
   const today = new Date().toISOString().split('T')[0]
 
-  // 1. Fetch inventory when selected date changes
   useEffect(() => {
     fetchInventory()
   }, [selectedDate])
 
-  // 2. Fetch calendar highlights when the month changes
   useEffect(() => {
     fetchConfiguredDates()
   }, [currentMonth])
@@ -30,7 +31,7 @@ export default function AdminInventory() {
         .from('products')
         .select('id, name, active')
         .eq('active', true)
-        .order('name', { ascending: true }) // Sort alphabetically A, B, C
+        .order('name', { ascending: true })
 
       const { data: stockData } = await supabase
         .from('stock_by_date')
@@ -47,7 +48,8 @@ export default function AdminInventory() {
       const formatted = productsData.map(product => ({
         id: product.id,
         name: product.name,
-        stock: stockMap.hasOwnProperty(product.id) ? stockMap[product.id] : 10 
+        // FIXED: Ensure we use 'stockMap' here, not 'stock'
+        stock: stockMap.hasOwnProperty(product.id) ? stockMap[product.id] : 10
       }))
       setProducts(formatted)
     } catch (error) {
@@ -81,7 +83,6 @@ export default function AdminInventory() {
     ))
   }
 
-  // NEW: Plus and Minus handlers
   const incrementStock = (productId) => {
     setProducts(prev => prev.map(p =>
       p.id === productId ? { ...p, stock: p.stock + 1 } : p
@@ -109,21 +110,30 @@ export default function AdminInventory() {
         .upsert(stockData, { onConflict: 'product_id, date' })
 
       if (error) {
-        alert('Error saving stock: ' + error.message)
+        setAlert({
+          message: 'Error saving stock: ' + error.message,
+          type: 'error'
+        })
       } else {
-        alert('Stock updated successfully!')
+        // 👈 REPLACE THE ALERT() WITH THIS:
+        setAlert({
+          message: 'Stock updated successfully!',
+          type: 'success'
+        })
         fetchInventory()
         fetchConfiguredDates()
       }
     } catch (error) {
       console.error('Error saving stock:', error)
-      alert('An unexpected error occurred.')
+      setAlert({
+        message: 'An unexpected error occurred.',
+        type: 'error'
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  // --- Calendar Helper Functions ---
   const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate()
   const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay()
 
@@ -144,31 +154,35 @@ export default function AdminInventory() {
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
 
   return (
-    <div className="min-h-screen bg-warm-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-text-main">Inventory</h1>
-          <p className="text-sm text-gray-500">Manage daily stock levels</p>
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Logo" className="h-9 w-auto object-contain" />
+            <div>
+              <h1 className="text-xl font-bold text-text-main">Inventory</h1>
+              <p className="text-sm text-gray-500">Manage daily stock levels</p>
+            </div>
+          </div>
         </div>
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        
         {/* --- VISUAL CALENDAR CARD --- */}
-        <div className="bg-white p-5 rounded-2xl shadow-soft">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           {/* Month Navigation */}
           <div className="flex justify-between items-center mb-6">
-            <button 
-              onClick={() => changeMonth(-1)} 
-              className="p-2 rounded-full hover:bg-warm-100 text-text-main transition-colors"
+            <button
+              onClick={() => changeMonth(-1)}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-700 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <h3 className="text-lg font-bold text-text-main">{monthName}</h3>
-            <button 
-              onClick={() => changeMonth(1)} 
-              className="p-2 rounded-full hover:bg-warm-100 text-text-main transition-colors"
+            <h3 className="text-lg font-bold text-gray-900">{monthName}</h3>
+            <button
+              onClick={() => changeMonth(1)}
+              className="p-2 rounded-full hover:bg-gray-100 text-gray-700 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </button>
@@ -183,18 +197,16 @@ export default function AdminInventory() {
 
           {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-2">
-            {/* Empty slots for days before the 1st of the month */}
             {Array.from({ length: firstDay }).map((_, i) => (
               <div key={`empty-${i}`}></div>
             ))}
-            
-            {/* Actual days */}
+
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1
               const dateKey = formatDateKey(year, month, day)
               const isConfigured = configuredDates.has(dateKey)
               const isSelected = dateKey === selectedDate
-              const isPast = dateKey < today // NEW: Check if date is in the past
+              const isPast = dateKey < today
 
               return (
                 <div
@@ -202,13 +214,13 @@ export default function AdminInventory() {
                   onClick={() => !isPast && setSelectedDate(dateKey)}
                   className={`
                     aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-all
-                    ${isPast 
-                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed' 
+                    ${isPast
+                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                       : 'cursor-pointer'}
-                    ${!isPast && isSelected ? 'ring-2 ring-primary ring-offset-2' : ''}
-                    ${!isPast && isConfigured 
-                      ? 'bg-green-500 text-white hover:bg-green-600' 
-                      : !isPast && 'bg-warm-50 text-text-main hover:bg-gray-200'}
+                    ${!isPast && isSelected ? 'ring-2 ring-[#1A237E] ring-offset-2' : ''}
+                    ${!isPast && isConfigured
+                      ? 'bg-green-500 text-white hover:bg-green-600'
+                      : !isPast && 'bg-gray-50 text-gray-700 hover:bg-gray-100'}
                   `}
                 >
                   {day}
@@ -216,32 +228,31 @@ export default function AdminInventory() {
               )
             })}
           </div>
-          
           <p className="text-xs text-gray-400 mt-4 text-center">
             🟢 Green days have stock configured
           </p>
         </div>
 
         {/* --- STOCK INPUT SECTION --- */}
-        <div className="bg-white p-5 rounded-2xl shadow-soft">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-bold text-text-main">Stock Levels</h3>
-            <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
+            <h3 className="text-lg font-bold text-gray-900">Stock Levels</h3>
+            <span className="text-sm font-medium text-[#1A237E] bg-[#1A237E]/10 px-3 py-1 rounded-full">
               {selectedDate}
             </span>
           </div>
 
           <div className="space-y-3">
             {products.map(product => (
-              <div key={product.id} className="flex justify-between items-center p-4 bg-warm-50 rounded-xl border border-gray-100">
-                <span className="font-medium text-text-main">{product.name}</span>
-                
-                {/* NEW: Plus/Minus Controls */}
+              <div key={product.id} className="flex justify-between items-center p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <span className="font-medium text-gray-900">{product.name}</span>
+
+                {/* Plus/Minus Controls */}
                 <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
                   <button
                     type="button"
                     onClick={() => decrementStock(product.id)}
-                    className="w-8 h-8 flex items-center justify-center rounded-md bg-warm-50 text-text-main hover:bg-gray-200 transition-colors font-bold text-lg"
+                    className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors font-bold text-lg"
                   >
                     -
                   </button>
@@ -250,12 +261,12 @@ export default function AdminInventory() {
                     min="0"
                     value={product.stock}
                     onChange={(e) => handleStockChange(product.id, e.target.value)}
-                    className="w-12 text-center p-1 rounded-md bg-transparent focus:ring-0 outline-none font-semibold text-text-main [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-12 text-center p-1 rounded-md bg-transparent focus:ring-0 outline-none font-semibold text-gray-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button
                     type="button"
                     onClick={() => incrementStock(product.id)}
-                    className="w-8 h-8 flex items-center justify-center rounded-md bg-primary text-white hover:bg-primary/90 transition-colors font-bold text-lg"
+                    className="w-8 h-8 flex items-center justify-center rounded-md bg-[#1A237E] text-white hover:bg-[#151a5c] transition-colors font-bold text-lg"
                   >
                     +
                   </button>
@@ -267,7 +278,7 @@ export default function AdminInventory() {
           <button
             onClick={handleSave}
             disabled={loading}
-            className="btn-primary w-full py-3.5 font-semibold mt-6 flex items-center justify-center gap-2"
+            className="w-full bg-[#1A237E] hover:bg-[#151a5c] text-white rounded-xl py-3.5 font-semibold mt-6 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
@@ -282,34 +293,47 @@ export default function AdminInventory() {
       </div>
 
       {/* Sticky Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-20">
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center justify-around py-3">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="flex flex-col items-center gap-1 text-gray-500 hover:text-text-main px-4 py-2 transition-colors"
+              className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 px-4 py-2 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
               <span className="text-xs font-medium">Dashboard</span>
             </button>
             <button
               onClick={() => navigate('/admin/history')}
-              className="flex flex-col items-center gap-1 text-gray-500 hover:text-text-main px-4 py-2 transition-colors"
+              className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 px-4 py-2 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <span className="text-xs font-medium">History</span>
             </button>
             <button
               onClick={() => navigate('/admin/inventory')}
-              className="flex flex-col items-center gap-1 text-primary px-4 py-2"
+              className="flex flex-col items-center gap-1 text-[#E31E24] px-4 py-2 border-t-2 border-[#E31E24] -mt-3 pt-3"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
               <span className="text-xs font-medium">Inventory</span>
             </button>
-            
           </div>
         </div>
       </nav>
+      {/* ... at the very end, before the closing </div>, add: */}
+      {alert && (
+        <AlertModal
+          message={alert.message}
+          onClose={closeAlert}
+          type={alert.type || 'error'}
+        />
+      )}
     </div>
   )
 }

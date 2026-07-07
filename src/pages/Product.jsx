@@ -224,42 +224,47 @@ export default function Product() {
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
 
         {/* Product Image & Info Card */}
-        <div className="bg-white p-5 rounded-3xl shadow-xl border-2 border-[#F5F0E6]">
-          <div className="h-64 w-full rounded-2xl bg-stone-100 overflow-hidden mb-6 border border-[#F5F0E6]">
+        <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] overflow-hidden">
+          {/* Image fills the entire width, no padding */}
+          <div className="w-full bg-stone-100">
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="w-full h-auto object-contain"
+              />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-stone-400">
+              <div className="w-full h-64 flex items-center justify-center text-stone-400">
                 <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
             )}
           </div>
-          <h1 className="text-3xl font-bold text-[#1A237E] font-display">{product.name}</h1>
 
-          {/* UPDATED: Polished Description */}
-          <p className="text-[15px] text-gray-600 mt-4 mb-6 leading-[1.75] font-body">
-            {product.description}
-          </p>
+          {/* Content below image */}
+          <div className="p-5">
+            <h1 className="text-3xl font-bold text-[#1A237E] font-display">{product.name}</h1>
+            <p className="text-[15px] text-gray-600 mt-4 mb-6 leading-[1.75] font-body">{product.description}</p>
 
-          <div className="mt-6 pt-6 border-t-2 border-[#F5F0E6] flex items-baseline justify-between">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-[#E31E24] font-display">RM{product.price}</span>
-              <span className="text-sm text-gray-500 font-body">• 280g</span>
+            <div className="mt-6 pt-6 border-t-2 border-[#F5F0E6] flex items-baseline justify-between">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-[#E31E24] font-display">RM{Number(product.price).toFixed(2)}</span>
+                <span className="text-sm text-gray-500 font-body">• 280g</span>
+              </div>
             </div>
-          </div>
 
-          {/* MOVED UP: Includes Free Seaweed Note */}
-          <div className="mt-4 p-4 bg-gradient-to-r from-[#FDFBF7] to-[#F5F0E6] rounded-2xl border border-[#F5F0E6] flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#E31E24]/10 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-[#E31E24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-800 font-display">Includes Free Seaweed</p>
-              <p className="text-xs text-gray-500 font-body">1x 4g Laverland Crunch (Sea Salt)</p>
+            {/* Includes Free Seaweed Note */}
+            <div className="mt-4 p-4 bg-gradient-to-r from-[#FDFBF7] to-[#F5F0E6] rounded-2xl border border-[#F5F0E6] flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#E31E24]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-[#E31E24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-800 font-display">Includes Free Seaweed</p>
+                <p className="text-xs text-gray-500 font-body">1x 4g Laverland Crunch (Sea Salt)</p>
+              </div>
             </div>
           </div>
         </div>

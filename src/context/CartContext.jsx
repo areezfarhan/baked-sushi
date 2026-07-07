@@ -13,7 +13,7 @@ export function CartProvider({ children }) {
   const addToCart = (product, date, quantity, maxAllowed) => {
     if (cartItems.length > 0 && cartItems[0].date !== date) {
       setAlert({
-        message: 'You can only order for one delivery date at a time! Please checkout or clear your cart first.',
+        message: 'You can only order for one delivery date at a time! Please clear your cart first.',
         type: 'warning'
       })
       return false

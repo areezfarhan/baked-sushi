@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
-import { CartProvider, useCart } from './context/CartContext' // 1. Import Provider and Hook
-import Toast from './components/Toast' // 2. Import the Toast component
+import { CartProvider, useCart } from './context/CartContext'
+import Toast from './components/Toast'
+import ScrollToTop from './components/ScrollToTop' // 👈 1. IMPORT IT HERE
 
 import Layout from './components/Layout';
 import Menu from './pages/Menu'
@@ -14,7 +15,6 @@ import AdminHistory from './pages/AdminHistory'
 import AdminInventory from './pages/AdminInventory'
 import ProtectedRoute from './components/ProtectedRoute'
 
-// 3. Create a small component to handle the Toast display
 function ToastManager() {
   const { toast, closeToast } = useCart()
   return toast ? <Toast message={toast} onClose={closeToast} /> : null
@@ -22,12 +22,10 @@ function ToastManager() {
 
 function App() {
   return (
-    // 4. Wrap the entire app in the CartProvider so the Toast can access the cart state
     <CartProvider>
+      <ScrollToTop /> {/* 👈 2. ADD IT RIGHT HERE */}
+      <ToastManager />
       <Layout>
-        {/* 5. Place the ToastManager here so it floats above all pages */}
-        <ToastManager />
-        
         <Routes>
           {/* Customer Routes */}
           <Route path="/" element={<Menu />} />

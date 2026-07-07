@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import AlertModal from '../components/AlertModal' // 👈 ADD THIS IMPORT
 
+
 // Helper to format date as "9 Jul 2026"
 const formatDateAesthetic = (dateString) => {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -17,14 +18,14 @@ export default function Checkout() {
   const { cartItems, clearCart } = useCart()
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
+
   // Form state
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [deliveryType, setDeliveryType] = useState('pickup')
   const [address, setAddress] = useState('')
   const [receipt, setReceipt] = useState(null)
-  
+
   // Alert state
   const [alert, setAlert] = useState(null) // 👈 ADD THIS
 
@@ -52,7 +53,48 @@ export default function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // 🔍 VALIDATION: Check all required fields
+
+    // 1. Check Name
+    if (!name || name.trim() === '') {
+      setAlert({
+        message: 'Please enter your full name.',
+        type: 'error'
+      })
+      return
+    }
+
+    // 2. Check Phone Number
+    if (!phone || phone.trim() === '') {
+      setAlert({
+        message: 'Please enter your WhatsApp number.',
+        type: 'error'
+      })
+      return
+    }
+
+    // 3. Check Receipt Upload
+    if (!receipt) {
+      setAlert({
+        message: 'Please upload your payment receipt.',
+        type: 'error'
+      })
+      return
+    }
+
+    // 4. Check Address (if delivery)
+    if (deliveryType === 'delivery' && (!address || address.trim() === '')) {
+      setAlert({
+        message: 'Please enter your delivery address.',
+        type: 'error'
+      })
+      return
+    }
+
+    // ✅ All validations passed - proceed with submission
     setIsSubmitting(true)
+
     try {
       // 1. Upload the receipt to Supabase Storage
       const fileExt = receipt.name.split('.').pop()
@@ -99,6 +141,7 @@ export default function Checkout() {
           console.error('Edge function error:', err)
         }
         // --- END: TRIGGER ADMIN EMAIL ---
+
         clearCart()
         navigate(`/confirmation/${data.order_reference}`)
       } else {
@@ -110,7 +153,6 @@ export default function Checkout() {
       }
     } catch (err) {
       console.error('Submission error:', err)
-      // 👈 REPLACE THE ALERT() WITH THIS:
       setAlert({
         message: 'Failed to submit order. Please try again.',
         type: 'error'
@@ -134,7 +176,7 @@ export default function Checkout() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        
+
         {/* Order Summary Card */}
         <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5">
           <div className="flex items-center justify-between mb-4">
@@ -143,7 +185,7 @@ export default function Checkout() {
               {formatDateAesthetic(cartItems[0].date)}
             </div>
           </div>
-          
+
           <ul className="space-y-3 mb-4">
             {cartItems.map((item, index) => (
               <li key={index} className="flex items-center gap-3 py-2 border-b border-[#F5F0E6] last:border-0 last:pb-0">
@@ -168,7 +210,7 @@ export default function Checkout() {
               </li>
             ))}
           </ul>
-          
+
           <div className="flex justify-between items-center pt-4 border-t-2 border-[#F5F0E6]">
             <span className="text-base font-bold text-[#1A237E] font-display">Total</span>
             <span className="text-2xl font-bold text-[#E31E24] font-display">RM{total.toFixed(2)}</span>
@@ -177,11 +219,11 @@ export default function Checkout() {
 
         {/* Checkout Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          
+
           {/* Customer Details Section */}
           <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5 space-y-4">
             <h2 className="text-lg font-bold text-[#1A237E] font-display">Customer Details</h2>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-body">Full Name</label>
               <input
@@ -193,7 +235,7 @@ export default function Checkout() {
                 placeholder="Enter your full name"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-body">WhatsApp Number</label>
               <input
@@ -205,35 +247,33 @@ export default function Checkout() {
                 placeholder="e.g., 012-3456789"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3 font-body">Delivery Type</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setDeliveryType('pickup')}
-                  className={`py-3 px-4 rounded-xl font-semibold transition-all font-display ${
-                    deliveryType === 'pickup'
-                      ? 'bg-[#E31E24] text-white shadow-lg'
-                      : 'bg-[#FDFBF7] text-gray-700 border border-[#F5F0E6] hover:bg-[#F5F0E6]'
-                  }`}
+                  className={`py-3 px-4 rounded-xl font-semibold transition-all font-display ${deliveryType === 'pickup'
+                    ? 'bg-[#E31E24] text-white shadow-lg'
+                    : 'bg-[#FDFBF7] text-gray-700 border border-[#F5F0E6] hover:bg-[#F5F0E6]'
+                    }`}
                 >
                   Pickup
                 </button>
                 <button
                   type="button"
                   onClick={() => setDeliveryType('delivery')}
-                  className={`py-3 px-4 rounded-xl font-semibold transition-all font-display ${
-                    deliveryType === 'delivery'
-                      ? 'bg-[#E31E24] text-white shadow-lg'
-                      : 'bg-[#FDFBF7] text-gray-700 border border-[#F5F0E6] hover:bg-[#F5F0E6]'
-                  }`}
+                  className={`py-3 px-4 rounded-xl font-semibold transition-all font-display ${deliveryType === 'delivery'
+                    ? 'bg-[#E31E24] text-white shadow-lg'
+                    : 'bg-[#FDFBF7] text-gray-700 border border-[#F5F0E6] hover:bg-[#F5F0E6]'
+                    }`}
                 >
                   Delivery
                 </button>
               </div>
             </div>
-            
+
             {deliveryType === 'delivery' && (
               <div className="space-y-3 pt-2">
                 <div>
@@ -259,7 +299,7 @@ export default function Checkout() {
           {/* Payment Section */}
           <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5 space-y-5">
             <h2 className="text-lg font-bold text-[#1A237E] font-display">Payment</h2>
-            
+
             {/* Payment Info Card */}
             <div className="bg-gradient-to-br from-[#FDFBF7] to-[#F5F0E6] p-5 rounded-2xl border border-[#F5F0E6]">
               <div className="flex items-center gap-2 mb-4">
@@ -268,7 +308,7 @@ export default function Checkout() {
                 </svg>
                 <h3 className="text-base font-bold text-[#1A237E] font-display">DuitNow QR / Bank Transfer</h3>
               </div>
-              
+
               {/* QR Code Placeholder */}
               <div className="bg-white p-4 rounded-xl border-2 border-dashed border-[#F5F0E6] mb-4 flex flex-col items-center justify-center">
                 <div className="w-40 h-40 bg-stone-100 rounded-lg flex items-center justify-center mb-3">
@@ -281,7 +321,7 @@ export default function Checkout() {
                 </div>
                 <p className="text-xs text-gray-500 text-center font-body">Scan to pay instantly</p>
               </div>
-              
+
               {/* Bank Details */}
               <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-3">
@@ -312,7 +352,7 @@ export default function Checkout() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-4 p-3 bg-white/60 rounded-xl border border-[#F5F0E6]">
                 <p className="text-xs text-gray-600 font-body">
                   <span className="font-semibold text-[#E31E24]">Important:</span> Please ensure your payment amount matches the order total exactly.
@@ -380,8 +420,8 @@ export default function Checkout() {
 
       {/* Alert Modal */}
       {alert && (
-        <AlertModal 
-          message={alert.message} 
+        <AlertModal
+          message={alert.message}
           onClose={closeAlert}
           type={alert.type || 'error'}
         />

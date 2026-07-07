@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
+import { formatPhoneNumber } from '../utils/phoneFormatter';
+import ConfirmModal from '../components/ConfirmModal'; // 👈 ADD THIS
 
 export default function AdminHistory() {
   const [orders, setOrders] = useState([])
@@ -9,6 +11,9 @@ export default function AdminHistory() {
   const [monthFilter, setMonthFilter] = useState('all')
   const [sortOption, setSortOption] = useState('newest')
   const navigate = useNavigate()
+  const [confirmData, setConfirmData] = useState(null);
+
+  const [expandedOrder, setExpandedOrder] = useState(null);
 
   useEffect(() => {
     fetchOrders()
@@ -51,32 +56,48 @@ export default function AdminHistory() {
     setLoading(false)
   }
 
-  const handleDelete = async (orderId) => {
-    if (!window.confirm('Delete this order permanently?')) return
-    const { error } = await supabase
-      .from('orders')
-      .delete()
-      .eq('id', orderId)
-    if (error) {
-      console.error('Error deleting order:', error)
-      alert('Error deleting order')
-    } else {
-      fetchOrders()
-    }
+  const handleDelete = (orderId) => {
+    setConfirmData({
+      title: "Delete Order?",
+      message: "This will permanently delete this order from your history.",
+      confirmText: "Delete",
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from('orders')
+          .delete()
+          .eq('id', orderId)
+
+        if (error) {
+          console.error('Error deleting order:', error)
+          alert('Error deleting order') // Fallback for unexpected errors
+        } else {
+          fetchOrders()
+        }
+        setConfirmData(null) // Close modal
+      }
+    })
   }
 
-  const handleClearAll = async () => {
-    if (!window.confirm('WARNING: This will delete ALL history orders permanently. Are you sure?')) return
-    const { error } = await supabase
-      .from('orders')
-      .delete()
-      .neq('status', 'pending_verification')
-    if (error) {
-      console.error('Error clearing history:', error)
-      alert('Error clearing history')
-    } else {
-      fetchOrders()
-    }
+  const handleClearAll = () => {
+    setConfirmData({
+      title: "Clear All History?",
+      message: "WARNING: This will permanently delete ALL history orders. This action cannot be undone.",
+      confirmText: "Clear All",
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from('orders')
+          .delete()
+          .neq('status', 'pending_verification')
+
+        if (error) {
+          console.error('Error clearing history:', error)
+          alert('Error clearing history') // Fallback
+        } else {
+          fetchOrders()
+        }
+        setConfirmData(null) // Close modal
+      }
+    })
   }
 
   const exportToCSV = () => {
@@ -132,6 +153,18 @@ export default function AdminHistory() {
     }
   }
 
+  const toggleAddress = (id) => {
+    setExpandedOrder(expandedOrder === id ? null : id);
+  };
+
+  // 👇 ADD THIS REVENUE CALCULATION 👇
+  const calculateRevenue = () => {
+    return orders
+      .filter(order => order.status === 'payment_confirmed')
+      .reduce((sum, order) => sum + Number(order.total_amount), 0)
+  }
+  const totalRevenue = calculateRevenue()
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -144,7 +177,7 @@ export default function AdminHistory() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] pb-24">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4">
@@ -160,25 +193,47 @@ export default function AdminHistory() {
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Top Action Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={exportToCSV}
-            disabled={orders.length === 0}
-            className="flex-1 bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Export CSV
-          </button>
-          <button
-            onClick={handleClearAll}
-            disabled={orders.length === 0}
-            className="flex-1 bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            Clear All
-          </button>
-        </div>
+        {/* Top Row: Actions (Left) and Revenue (Right) */}
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
 
+          {/* Left Column: Action Buttons */}
+          <div className="flex gap-3 w-full md:w-auto">
+            <button
+              onClick={exportToCSV}
+              disabled={orders.length === 0}
+              className="flex-1 md:flex-none bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Export CSV
+            </button>
+            <button
+              onClick={handleClearAll}
+              disabled={orders.length === 0}
+              className="flex-1 md:flex-none bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              Clear All
+            </button>
+          </div>
+
+          {/* Right Column: Total Revenue Card */}
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4 w-full md:w-auto">
+            <div className="bg-green-100 p-3 rounded-full">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {monthFilter === 'all' ? 'Total Lifetime Revenue' : `Revenue for ${monthFilter}`}
+              </p>
+              <p className="text-xl font-bold text-gray-900">
+                RM {totalRevenue.toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+        </div>
         {/* Filters Section */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 space-y-4">
           {/* Status Pills */}
@@ -249,9 +304,20 @@ export default function AdminHistory() {
                 {/* Card Header */}
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
                   <div>
-                    <span className="font-bold text-gray-900 text-lg">{order.order_reference}</span>
-                    <span className="text-xs text-gray-400 ml-2">#{index + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900 text-lg">{order.order_reference}</span>
+                      <span className="text-xs text-gray-400">#{index + 1}</span>
+                    </div>
+
+                    {/* 👇 NEW: Order Creation Timestamp 👇 */}
+                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Placed: {new Date(order.created_at).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
                   </div>
+
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusStyles(order.status)}`}>
                     {order.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
@@ -266,7 +332,7 @@ export default function AdminHistory() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 truncate">{order.customer_name}</p>
                       <a
-                        href={`https://wa.me/${order.phone.replace(/\D/g, '')}`}
+                        href={`https://wa.me/${formatPhoneNumber(order.phone)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1 mt-1"
@@ -280,6 +346,31 @@ export default function AdminHistory() {
                       <p className="text-sm font-medium text-gray-900">{new Date(order.delivery_date).toLocaleDateString('en-MY')}</p>
                     </div>
                   </div>
+
+                  {/* Expandable Address Section - Only for Delivery Orders */}
+                  {order.delivery_type === 'delivery' && (
+                    <div className="pl-13">
+                      <button
+                        onClick={() => toggleAddress(order.id)}
+                        className="text-xs text-[#1A237E] font-bold flex items-center gap-1 hover:underline transition-colors"
+                      >
+                        {expandedOrder === order.id ? 'Hide Address' : 'View Address'}
+                        <svg className={`w-3 h-3 transition-transform duration-200 ${expandedOrder === order.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {expandedOrder === order.id && (
+                        <div className="mt-2 p-3 bg-[#FDFBF7] rounded-xl border border-[#F5F0E6] text-sm text-gray-700 flex items-start gap-2 animate-fade-in">
+                          <svg className="w-4 h-4 text-[#E31E24] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="leading-relaxed">{order.address}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Items */}
                   <div className="border-t border-gray-100 pt-3">
@@ -348,6 +439,15 @@ export default function AdminHistory() {
           </div>
         </div>
       </nav>
+      {/* 👇 ADD THIS CONFIRMATION MODAL 👇 */}
+      <ConfirmModal
+        isOpen={!!confirmData}
+        onClose={() => setConfirmData(null)}
+        onConfirm={confirmData?.onConfirm}
+        title={confirmData?.title}
+        message={confirmData?.message}
+        confirmText={confirmData?.confirmText}
+      />
     </div>
   )
 }

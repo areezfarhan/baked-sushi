@@ -2,6 +2,7 @@ import { useCart } from '../context/CartContext'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import AlertModal from '../components/AlertModal'
+import ConfirmModal from '../components/ConfirmModal'; // 👈 ADD THIS
 
 // Helper to format date as "9 Jul 2026"
 const formatDateAesthetic = (dateString) => {
@@ -13,7 +14,7 @@ const formatDateAesthetic = (dateString) => {
 
 export default function Cart() {
   const { cartItems, clearCart, removeFromCart, decreaseQuantity, alert, closeAlert } = useCart()
-  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [confirmData, setConfirmData] = useState(null);
 
   if (cartItems.length === 0) {
     return (
@@ -51,7 +52,7 @@ export default function Cart() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        
+
         {/* Delivery Date Badge */}
         <div className="flex justify-center">
           <div className="bg-[#1A237E]/10 text-[#1A237E] px-5 py-2 rounded-full text-sm font-semibold flex items-center gap-2 border border-[#1A237E]/20 font-body">
@@ -70,8 +71,8 @@ export default function Cart() {
                 {/* Product Image - Tighter spacing, subtle border */}
                 <div className="flex-shrink-0 w-28 h-24 rounded-2xl overflow-hidden bg-stone-100 border border-[#F5F0E6]/40">
                   {item.product.image_url ? (
-                    <img 
-                      src={item.product.image_url} 
+                    <img
+                      src={item.product.image_url}
                       alt={item.product.name}
                       className="w-full h-full object-cover"
                     />
@@ -83,14 +84,22 @@ export default function Cart() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Product Details */}
                 <div className="flex-1 ml-3 flex flex-col justify-between">
                   <div className="flex justify-between items-start">
                     <h3 className="text-lg font-bold text-[#1A237E] leading-tight font-display">{item.product.name}</h3>
                     {/* Delete Button */}
                     <button
-                      onClick={() => removeFromCart(item.product.id, item.date)}
+                      onClick={() => setConfirmData({
+                        title: "Remove Item?",
+                        message: `Are you sure you want to remove ${item.product.name} from your cart?`,
+                        confirmText: "Remove",
+                        onConfirm: () => {
+                          removeFromCart(item.product.id, item.date);
+                          setConfirmData(null);
+                        }
+                      })}
                       className="text-gray-400 hover:text-[#E31E24] transition-colors p-1 -mr-1 -mt-1"
                       title="Remove item"
                     >
@@ -99,14 +108,14 @@ export default function Cart() {
                       </svg>
                     </button>
                   </div>
-                  
+
                   {/* Price & Quantity Controls */}
                   <div className="flex justify-between items-end mt-2">
                     <div>
                       <p className="text-xs text-gray-500 mb-1 font-body">RM{Number(item.product.price).toFixed(2)} each</p>
                       <p className="text-xl font-bold text-[#E31E24] font-display">RM{(item.product.price * item.quantity).toFixed(2)}</p>
                     </div>
-                    
+
                     {/* Quantity Controls - MINUS ONLY */}
                     <div className="flex items-center gap-2 bg-[#FDFBF7] rounded-xl border border-[#F5F0E6]/60 p-1">
                       <button
@@ -129,7 +138,15 @@ export default function Cart() {
         {/* Clear Cart Button */}
         <div className="pt-4">
           <button
-            onClick={() => setShowClearConfirm(true)}
+            onClick={() => setConfirmData({
+              title: "Clear Entire Cart?",
+              message: "This will remove all items from your cart. This action cannot be undone.",
+              confirmText: "Clear Cart",
+              onConfirm: () => {
+                clearCart();
+                setConfirmData(null);
+              }
+            })}
             className="w-full py-3.5 px-6 rounded-2xl font-semibold text-[#E31E24] bg-[#E31E24]/5 border-2 border-[#E31E24]/20 hover:bg-[#E31E24]/10 hover:border-[#E31E24]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 font-display"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,23 +177,22 @@ export default function Cart() {
 
       {/* Alert Modal (for errors/warnings) */}
       {alert && (
-        <AlertModal 
-          message={alert.message} 
+        <AlertModal
+          message={alert.message}
           onClose={closeAlert}
           type={alert.type || 'error'}
         />
       )}
 
-      {/* Clear Cart Confirmation Modal */}
-      {showClearConfirm && (
-        <AlertModal
-          message="Are you sure you want to clear your entire cart? This action cannot be undone."
-          onClose={() => setShowClearConfirm(false)}
-          onConfirm={clearCart}
-          type="warning"
-          confirmText="Clear Cart"
-        />
-      )}
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!confirmData}
+        onClose={() => setConfirmData(null)}
+        onConfirm={confirmData?.onConfirm}
+        title={confirmData?.title}
+        message={confirmData?.message}
+        confirmText={confirmData?.confirmText}
+      />
     </div>
   )
 }

@@ -40,7 +40,7 @@ export function CartProvider({ children }) {
       setCartItems(updatedCart)
       
       // NEW: Show success toast
-      setToast(`Updated ${product.name} quantity!`)
+      setToast(`Added ${product.name} To Cart!`)
       return true
     } else {
       if (quantity > maxAllowed) {

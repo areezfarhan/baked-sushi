@@ -30,7 +30,7 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] flex items-center justify-center p-7">
       <div className="w-full max-w-md">
         {/* Header with Logo */}
         <div className="text-center mb-8">

@@ -1,21 +1,39 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
+import LogoutConfirmation from '../components/LogoutConfirmation';
+import RejectConfirmation from '../components/RejectConfirmation';
+import { formatPhoneNumber } from '../utils/phoneFormatter'; // 👈 ADD THIS LINE
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  useEffect(() => {
-    fetchOrders()
-  }, [])
+  const handleLogoutClick = () => setShowLogoutModal(true);
+  const handleCloseModal = () => setShowLogoutModal(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectingOrderId, setRejectingOrderId] = useState(null);
 
+  const [expandedOrder, setExpandedOrder] = useState(null);
+  const toggleAddress = (id) => {
+    setExpandedOrder(expandedOrder === id ? null : id);
+  };
+
+  const handleConfirmLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      navigate('/admin/login');
+    }
+    setShowLogoutModal(false);
+  };
+
+  // MOVED UP: fetchOrders must be defined BEFORE useEffect
   const fetchOrders = async () => {
-    // Only fetch pending verification orders
     const { data, error } = await supabase
       .from('orders')
-      .select('*, order_items(*, products(*))')
+      .select('*, order_items(*, products(*))') // Fixed the select syntax
       .eq('status', 'pending_verification')
       .order('created_at', { ascending: false })
 
@@ -26,6 +44,10 @@ export default function AdminDashboard() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    fetchOrders()
+  }, [])
 
   const handleApprove = async (orderId) => {
     const { error } = await supabase
@@ -41,30 +63,44 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleReject = async (orderId) => {
-    if (!window.confirm('Are you sure you want to reject this order? Stock will be restored.')) return
+  // This just opens the modal
+  const handleRejectClick = (orderId) => {
+    setRejectingOrderId(orderId);
+    setShowRejectModal(true);
+  };
 
-    // First, restore the stock
-    const { error: rpcError } = await supabase.rpc('restore_stock', { p_order_id: orderId })
+  // This actually does the rejection logic
+  const handleConfirmReject = async () => {
+    if (!rejectingOrderId) return;
+
+    // 1. Restore stock
+    const { error: rpcError } = await supabase.rpc('restore_stock', { p_order_id: rejectingOrderId });
     if (rpcError) {
-      console.error('Error restoring stock:', rpcError)
-      alert('Error restoring stock')
-      return
+      console.error('Error restoring stock:', rpcError);
+      alert('Error restoring stock');
+      setShowRejectModal(false);
+      return;
     }
 
-    // Then update order status
+    // 2. Update status to rejected
     const { error } = await supabase
       .from('orders')
       .update({ status: 'rejected' })
-      .eq('id', orderId)
+      .eq('id', rejectingOrderId);
 
     if (error) {
-      console.error('Error rejecting order:', error)
-      alert('Error rejecting order')
+      console.error('Error rejecting order:', error);
+      alert('Error rejecting order');
     } else {
-      fetchOrders()
+      fetchOrders(); // Refresh the dashboard
     }
-  }
+
+    // Close modal and reset
+    setShowRejectModal(false);
+    setRejectingOrderId(null);
+  };
+
+  // ... KEEP ALL YOUR EXISTING RETURN JSX AND BOTTOM NAVIGATION EXACTLY AS IT IS ...
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -83,7 +119,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] pb-24">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10 border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 py-4">
@@ -96,7 +132,7 @@ export default function AdminDashboard() {
               </div>
             </div>
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className="p-2 text-gray-600 hover:text-red-600 transition-colors"
               title="Logout"
             >
@@ -160,7 +196,7 @@ export default function AdminDashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 truncate">{order.customer_name}</p>
                       <a
-                        href={`https://wa.me/${order.phone.replace(/\D/g, '')}`}
+                        href={`https://wa.me/${formatPhoneNumber(order.phone)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1 mt-1"
@@ -180,6 +216,31 @@ export default function AdminDashboard() {
                     </svg>
                     <span>Delivery: {new Date(order.delivery_date).toLocaleDateString('en-MY')}</span>
                   </div>
+
+                  {/* Expandable Address Section */}
+                  {order.delivery_type === 'delivery' && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => toggleAddress(order.id)}
+                        className="text-xs text-[#1A237E] font-bold flex items-center gap-1 hover:underline transition-colors"
+                      >
+                        {expandedOrder === order.id ? 'Hide Address' : 'View Address'}
+                        <svg className={`w-3 h-3 transition-transform duration-200 ${expandedOrder === order.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {expandedOrder === order.id && (
+                        <div className="mt-2 p-3 bg-[#FDFBF7] rounded-xl border border-[#F5F0E6] text-sm text-gray-700 flex items-start gap-2 animate-fade-in">
+                          <svg className="w-4 h-4 text-[#E31E24] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="leading-relaxed">{order.address}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Order Items */}
                   <div className="border-t border-gray-100 pt-3">
@@ -231,7 +292,7 @@ export default function AdminDashboard() {
                       Approve
                     </button>
                     <button
-                      onClick={() => handleReject(order.id)}
+                      onClick={() => handleRejectClick(order.id)}
                       className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 border-2 border-red-200 rounded-xl py-3 font-semibold transition-colors flex items-center justify-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,6 +342,19 @@ export default function AdminDashboard() {
           </div>
         </div>
       </nav>
+
+      <RejectConfirmation
+        isOpen={showRejectModal}
+        onClose={() => setShowRejectModal(false)}
+        onConfirm={handleConfirmReject}
+      />
+
+      {/* ADD THIS AT THE VERY BOTTOM */}
+      <LogoutConfirmation
+        isOpen={showLogoutModal}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmLogout}
+      />
     </div>
   )
 }

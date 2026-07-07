@@ -1,13 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { Link } from 'react-router-dom'
+import FloatingWhatsApp from '../components/FloatingWhatsApp';
 
-// Protein icons for each product
-const proteinIcons = {
-  'salmon': '',
-  'prawn': '🦐',
-  'chicken': '🐔'
-}
 
 // Helper to detect protein type from product name
 const getProteinType = (name) => {
@@ -16,6 +11,13 @@ const getProteinType = (name) => {
   if (lower.includes('prawn')) return 'prawn'
   if (lower.includes('chicken') || lower.includes('teriyaki')) return 'chicken'
   return 'salmon'
+}
+
+// Fallback emojis for when product images are missing
+const proteinIcons = {
+  salmon: '🍣',
+  prawn: '🍤',
+  chicken: '🍗'
 }
 
 export default function Menu() {
@@ -69,7 +71,7 @@ export default function Menu() {
 
             {/* Badge */}
             <div className="inline-block bg-[#1A237E]/10 text-[#1A237E] px-5 py-1.5 rounded-full mb-4 font-bold text-xs border border-[#1A237E]/20 whitespace-nowrap">
-              🍣 Fresh Daily • Order Before 9AM
+              Made Fresh Daily • Order Before 9AM
             </div>
 
             {/* Title */}
@@ -171,6 +173,8 @@ export default function Menu() {
           </div>
         )}
       </div>
+      {/* Floating WhatsApp Button */}
+        <FloatingWhatsApp />
     </div>
   )
 }

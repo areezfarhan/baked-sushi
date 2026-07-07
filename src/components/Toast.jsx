@@ -11,7 +11,7 @@ export default function Toast({ message, onClose }) {
   }, [onClose])
 
   return (
-    <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 animate-slideDown">
+    <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] animate-slideDown">
       <div className="bg-white border border-green-200 shadow-lg rounded-xl px-5 py-3 flex items-center gap-3 max-w-sm">
         <div className="bg-green-100 p-1.5 rounded-full">
           <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -20,7 +20,6 @@ export default function Toast({ message, onClose }) {
         </div>
         <div>
           <p className="font-semibold text-text-main text-sm">{message}</p>
-          <p className="text-xs text-gray-500">Ready for checkout</p>
         </div>
       </div>
     </div>

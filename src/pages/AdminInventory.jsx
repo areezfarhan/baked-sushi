@@ -14,8 +14,11 @@ export default function AdminInventory() {
 
   const closeAlert = () => setAlert(null) // 👈 ADD THIS FUNCTION
 
-  const today = new Date().toISOString().split('T')[0]
-
+  // Get today's date specifically in Kuala Lumpur timezone
+  const now = new Date()
+  const klString = now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+  const klDate = new Date(klString)
+  const today = `${klDate.getFullYear()}-${String(klDate.getMonth() + 1).padStart(2, '0')}-${String(klDate.getDate()).padStart(2, '0')}`
   useEffect(() => {
     fetchInventory()
   }, [selectedDate])
@@ -154,7 +157,7 @@ export default function AdminInventory() {
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] pb-24">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4">

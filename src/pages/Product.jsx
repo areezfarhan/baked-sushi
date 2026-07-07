@@ -70,7 +70,10 @@ export default function Product() {
   const fetchAvailableDates = async () => {
     if (!id) return
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const now = new Date()
+      const klString = now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+      const klDate = new Date(klString)
+      const today = `${klDate.getFullYear()}-${String(klDate.getMonth() + 1).padStart(2, '0')}-${String(klDate.getDate()).padStart(2, '0')}`
       const { data, error } = await supabase
         .from('stock_by_date')
         .select('date, remaining_stock')
@@ -164,7 +167,10 @@ export default function Product() {
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const klString = now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+  const klDate = new Date(klString)
+  const today = `${klDate.getFullYear()}-${String(klDate.getMonth() + 1).padStart(2, '0')}-${String(klDate.getDate()).padStart(2, '0')}`
 
   const isKLTimeAfter9AM = () => {
     const now = new Date()

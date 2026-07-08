@@ -248,7 +248,10 @@ export default function AdminDashboard() {
                     <div className="space-y-1">
                       {order.order_items && order.order_items.map((item, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
-                          <span className="text-gray-600">{item.products?.name}</span>
+                          <span className="text-gray-600">
+                            {item.products?.name}
+                            {item.variant && <span className="text-gray-400 text-xs ml-1">({item.variant})</span>}
+                          </span>
                           <span className="font-medium text-gray-900">x{item.quantity}</span>
                         </div>
                       ))}

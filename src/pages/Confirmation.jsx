@@ -7,7 +7,7 @@ export default function Confirmation() {
   const [copied, setCopied] = useState(false)
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
-  
+
   const adminPhone = "60127575453" // Remember to update this to your real number later!
   const message = `I have ordered, thank you — Order Ref: ${ref}`
   const waLink = `https://wa.me/${adminPhone}?text=${encodeURIComponent(message)}`
@@ -20,16 +20,8 @@ export default function Confirmation() {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select(`
-          *,
-          order_items (
-            quantity,
-            price_at_order,
-            products (
-              name
-            )
-          )
-        `)
+        .select(`*, order_items ( quantity, price_at_order, variant, products ( name ) )
+`)
         .eq('order_reference', ref)
         .single()
 
@@ -60,36 +52,36 @@ export default function Confirmation() {
     try {
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
-      
+
       // Calculate dynamic height based on number of items
       const itemsCount = order.order_items ? order.order_items.length : 0
-      const itemHeight = 40 
-      const baseHeight = 320 
+      const itemHeight = 40
+      const baseHeight = 320
       const canvasHeight = baseHeight + (itemsCount * itemHeight)
-      
+
       canvas.width = 400
       canvas.height = canvasHeight
-      
+
       // Background
       ctx.fillStyle = '#FDFBF7'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
-      
+
       // Header
       ctx.fillStyle = '#1A237E'
       ctx.font = 'bold 22px sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('Order Confirmation', canvas.width / 2, 40)
-      
+
       // Ref Label
       ctx.fillStyle = '#7A7571'
       ctx.font = '12px sans-serif'
       ctx.fillText('YOUR ORDER REFERENCE', canvas.width / 2, 70)
-      
+
       // Ref Number
       ctx.fillStyle = '#E31E24'
       ctx.font = 'bold 32px sans-serif'
       ctx.fillText(ref, canvas.width / 2, 110)
-      
+
       // Divider
       ctx.strokeStyle = '#E5E7EB'
       ctx.lineWidth = 1
@@ -97,69 +89,71 @@ export default function Confirmation() {
       ctx.moveTo(30, 130)
       ctx.lineTo(370, 130)
       ctx.stroke()
-      
+
       // Delivery Date
       ctx.fillStyle = '#374151'
       ctx.font = '14px sans-serif'
       ctx.textAlign = 'left'
       const dateStr = new Date(order.delivery_date).toLocaleDateString('en-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
       ctx.fillText(`Delivery Date: ${dateStr}`, 30, 160)
-      
+
       // Items Header
       ctx.fillStyle = '#111827'
       ctx.font = 'bold 16px sans-serif'
       ctx.fillText('Items Ordered:', 30, 200)
-      
+
       // Items List
       let currentY = 230
       ctx.font = '14px sans-serif'
       if (order.order_items) {
         order.order_items.forEach((item) => {
-          const name = item.products?.name || 'Product'
+          const baseName = item.products?.name || 'Product'
+          const variantText = item.variant ? ` (${item.variant})` : ''
+          const name = baseName + variantText
           const qty = item.quantity
           const price = Number(item.price_at_order).toFixed(2)
           const subtotal = (Number(item.price_at_order) * item.quantity).toFixed(2)
-          
+
           // Product Name
           ctx.textAlign = 'left'
           ctx.fillStyle = '#111827'
           ctx.fillText(name, 30, currentY)
-          
+
           // Subtotal (Right aligned)
           ctx.textAlign = 'right'
           ctx.fillStyle = '#1A237E'
           ctx.font = 'bold 14px sans-serif'
           ctx.fillText(`RM${subtotal}`, 370, currentY)
-          
+
           // Qty x Price (Left aligned, smaller)
           ctx.textAlign = 'left'
           ctx.font = '12px sans-serif'
           ctx.fillStyle = '#6B7280'
           ctx.fillText(`Qty: ${qty} × RM${price}`, 30, currentY + 18)
-          
+
           ctx.font = '14px sans-serif' // Reset for next item
           currentY += 40
         })
       }
-      
+
       // Divider before total
       ctx.strokeStyle = '#E5E7EB'
       ctx.beginPath()
       ctx.moveTo(30, currentY + 10)
       ctx.lineTo(370, currentY + 10)
       ctx.stroke()
-      
+
       // Total Amount
       ctx.textAlign = 'left'
       ctx.fillStyle = '#111827'
       ctx.font = 'bold 18px sans-serif'
       ctx.fillText('Total Amount', 30, currentY + 45)
-      
+
       ctx.textAlign = 'right'
       ctx.fillStyle = '#E31E24'
       ctx.font = 'bold 22px sans-serif'
       ctx.fillText(`RM${Number(order.total_amount).toFixed(2)}`, 370, currentY + 48)
-      
+
       // Trigger download
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob)
@@ -213,9 +207,8 @@ export default function Confirmation() {
                 </h2>
                 <button
                   onClick={handleCopy}
-                  className={`p-2 rounded-lg transition-all ${
-                    copied ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
+                  className={`p-2 rounded-lg transition-all ${copied ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
                   title="Copy reference"
                 >
                   {copied ? (
@@ -250,7 +243,10 @@ export default function Confirmation() {
                   {order.order_items && order.order_items.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-start">
                       <div className="flex-1">
-                        <p className="font-semibold text-gray-900 text-sm font-display">{item.products?.name}</p>
+                        <p className="font-semibold text-gray-900 text-sm font-display">
+                          {item.products?.name}
+                          {item.variant && <span className="text-xs font-normal text-gray-500 ml-1 font-body">({item.variant})</span>}
+                        </p>
                         <p className="text-xs text-gray-500 mt-0.5 font-body">Qty: {item.quantity} × RM{Number(item.price_at_order).toFixed(2)}</p>
                       </div>
                       <p className="font-bold text-[#1A237E] text-sm font-display ml-4">
@@ -289,7 +285,7 @@ export default function Confirmation() {
           <a href={waLink} target="_blank" rel="noopener noreferrer" className="block">
             <button className="w-full bg-[#0fa348] text-white py-4 text-base font-bold flex items-center justify-center gap-3 rounded-2xl hover:bg-[#1DA851] transition-colors shadow-lg font-display">
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
               </svg>
               Message on WhatsApp
             </button>

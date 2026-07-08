@@ -2,7 +2,7 @@ import { useCart } from '../context/CartContext'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import AlertModal from '../components/AlertModal'
-import ConfirmModal from '../components/ConfirmModal'; // 👈 ADD THIS
+import ConfirmModal from '../components/ConfirmModal';
 
 // Helper to format date as "9 Jul 2026"
 const formatDateAesthetic = (dateString) => {
@@ -35,7 +35,11 @@ export default function Cart() {
     )
   }
 
-  const total = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+  // UPDATED: Calculate total using item.price (for variants) or product.price (for sushi)
+  const total = cartItems.reduce((sum, item) => {
+    const price = item.price || item.product.price;
+    return sum + (price * item.quantity);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] pb-32">
@@ -52,7 +56,6 @@ export default function Cart() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-
         {/* Delivery Date Badge */}
         <div className="flex justify-center">
           <div className="bg-[#1A237E]/10 text-[#1A237E] px-5 py-2 rounded-full text-sm font-semibold flex items-center gap-2 border border-[#1A237E]/20 font-body">
@@ -65,74 +68,82 @@ export default function Cart() {
 
         {/* Cart Items List */}
         <ul className="space-y-4">
-          {cartItems.map((item, index) => (
-            <li key={index} className="bg-white rounded-3xl shadow-lg overflow-hidden border border-[#F5F0E6]/60 hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-stretch p-3">
-                {/* Product Image - Tighter spacing, subtle border */}
-                <div className="flex-shrink-0 w-28 h-24 rounded-2xl overflow-hidden bg-stone-100 border border-[#F5F0E6]/40">
-                  {item.product.image_url ? (
-                    <img
-                      src={item.product.image_url}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-stone-400">
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
+          {cartItems.map((item, index) => {
+            // Get the correct price for this specific item (variant price or base price)
+            const itemPrice = item.price || item.product.price;
 
-                {/* Product Details */}
-                <div className="flex-1 ml-3 flex flex-col justify-between">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-bold text-[#1A237E] leading-tight font-display">{item.product.name}</h3>
-                    {/* Delete Button */}
-                    <button
-                      onClick={() => setConfirmData({
-                        title: "Remove Item?",
-                        message: `Are you sure you want to remove ${item.product.name} from your cart?`,
-                        confirmText: "Remove",
-                        onConfirm: () => {
-                          removeFromCart(item.product.id, item.date);
-                          setConfirmData(null);
-                        }
-                      })}
-                      className="text-gray-400 hover:text-[#E31E24] transition-colors p-1 -mr-1 -mt-1"
-                      title="Remove item"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+            return (
+              <li key={index} className="bg-white rounded-3xl shadow-lg overflow-hidden border border-[#F5F0E6]/60 hover:shadow-xl transition-shadow duration-300">
+                <div className="flex items-stretch p-3">
+                  {/* Product Image */}
+                  <div className="flex-shrink-0 w-28 h-24 rounded-2xl overflow-hidden bg-stone-100 border border-[#F5F0E6]/40">
+                    {item.product.image_url ? (
+                      <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-400">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Price & Quantity Controls */}
-                  <div className="flex justify-between items-end mt-2">
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1 font-body">RM{Number(item.product.price).toFixed(2)} each</p>
-                      <p className="text-xl font-bold text-[#E31E24] font-display">RM{(item.product.price * item.quantity).toFixed(2)}</p>
-                    </div>
-
-                    {/* Quantity Controls - MINUS ONLY */}
-                    <div className="flex items-center gap-2 bg-[#FDFBF7] rounded-xl border border-[#F5F0E6]/60 p-1">
+                  {/* Product Details */}
+                  <div className="flex-1 ml-3 flex flex-col justify-between">
+                    <div className="flex justify-between items-start">
+                      {/* UPDATED: Show Variant Name if it exists */}
+                      <h3 className="text-lg font-bold text-[#1A237E] leading-tight font-display">
+                        {item.product.name}
+                        {item.variant && <span className="text-sm font-normal text-gray-500 ml-2 font-body">({item.variant})</span>}
+                      </h3>
+                      
+                      {/* Delete Button */}
                       <button
-                        onClick={() => decreaseQuantity(item.product.id, item.date)}
-                        className="w-8 h-8 rounded-lg bg-white border border-[#F5F0E6]/60 text-[#1A237E] font-bold flex items-center justify-center transition-all hover:bg-[#F5F0E6] active:scale-95 shadow-sm font-display"
+                        onClick={() => setConfirmData({
+                          title: "Remove Item?",
+                          message: `Are you sure you want to remove ${item.product.name} from your cart?`,
+                          confirmText: "Remove",
+                          onConfirm: () => {
+                            // UPDATED: Pass variant to removeFromCart
+                            removeFromCart(item.product.id, item.date, item.variant);
+                            setConfirmData(null);
+                          }
+                        })}
+                        className="text-gray-400 hover:text-[#E31E24] transition-colors p-1 -mr-1 -mt-1"
+                        title="Remove item"
                       >
-                        −
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
-                      <span className="text-[#1A237E] font-semibold w-6 text-center text-sm font-display">
-                        {item.quantity}
-                      </span>
+                    </div>
+
+                    {/* Price & Quantity Controls */}
+                    <div className="flex justify-between items-end mt-2">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1 font-body">RM{Number(itemPrice).toFixed(2)} each</p>
+                        <p className="text-xl font-bold text-[#E31E24] font-display">RM{(itemPrice * item.quantity).toFixed(2)}</p>
+                      </div>
+                      
+                      {/* Quantity Controls */}
+                      <div className="flex items-center gap-2 bg-[#FDFBF7] rounded-xl border border-[#F5F0E6]/60 p-1">
+                        <button
+                          // UPDATED: Pass variant to decreaseQuantity
+                          onClick={() => decreaseQuantity(item.product.id, item.date, item.variant)}
+                          className="w-8 h-8 rounded-lg bg-white border border-[#F5F0E6]/60 text-[#1A237E] font-bold flex items-center justify-center transition-all hover:bg-[#F5F0E6] active:scale-95 shadow-sm font-display"
+                        >
+                          −
+                        </button>
+                        <span className="text-[#1A237E] font-semibold w-6 text-center text-sm font-display">
+                          {item.quantity}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
 
         {/* Clear Cart Button */}
@@ -175,13 +186,9 @@ export default function Cart() {
         </div>
       </div>
 
-      {/* Alert Modal (for errors/warnings) */}
+      {/* Alert Modal */}
       {alert && (
-        <AlertModal
-          message={alert.message}
-          onClose={closeAlert}
-          type={alert.type || 'error'}
-        />
+        <AlertModal message={alert.message} onClose={closeAlert} type={alert.type || 'error'} />
       )}
 
       {/* Confirmation Modal */}

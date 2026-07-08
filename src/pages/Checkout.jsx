@@ -3,8 +3,7 @@ import { useState } from 'react'
 import { useCart } from '../context/CartContext'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import AlertModal from '../components/AlertModal' // 👈 ADD THIS IMPORT
-
+import AlertModal from '../components/AlertModal'
 
 // Helper to format date as "9 Jul 2026"
 const formatDateAesthetic = (dateString) => {
@@ -27,9 +26,8 @@ export default function Checkout() {
   const [receipt, setReceipt] = useState(null)
 
   // Alert state
-  const [alert, setAlert] = useState(null) // 👈 ADD THIS
-
-  const closeAlert = () => setAlert(null) // 👈 ADD THIS
+  const [alert, setAlert] = useState(null)
+  const closeAlert = () => setAlert(null)
 
   // If cart is empty, send them back to menu
   if (cartItems.length === 0) {
@@ -49,14 +47,16 @@ export default function Checkout() {
     )
   }
 
-  const total = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
+  // UPDATED: Calculate total using item.price (for variants) or product.price (for sushi)
+  const total = cartItems.reduce((sum, item) => {
+    const price = item.price || item.product.price;
+    return sum + (price * item.quantity);
+  }, 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // 🔍 VALIDATION: Check all required fields
-
-    // 1. Check Name
+    // VALIDATION: Check all required fields
     if (!name || name.trim() === '') {
       setAlert({
         message: 'Please enter your full name.',
@@ -65,7 +65,6 @@ export default function Checkout() {
       return
     }
 
-    // 2. Check Phone Number
     if (!phone || phone.trim() === '') {
       setAlert({
         message: 'Please enter your WhatsApp number.',
@@ -74,7 +73,6 @@ export default function Checkout() {
       return
     }
 
-    // 3. Check Receipt Upload
     if (!receipt) {
       setAlert({
         message: 'Please upload your payment receipt.',
@@ -83,7 +81,6 @@ export default function Checkout() {
       return
     }
 
-    // 4. Check Address (if delivery)
     if (deliveryType === 'delivery' && (!address || address.trim() === '')) {
       setAlert({
         message: 'Please enter your delivery address.',
@@ -92,7 +89,7 @@ export default function Checkout() {
       return
     }
 
-    // ✅ All validations passed - proceed with submission
+    // All validations passed - proceed with submission
     setIsSubmitting(true)
 
     try {
@@ -100,19 +97,31 @@ export default function Checkout() {
       const fileExt = receipt.name.split('.').pop()
       const fileName = `${Date.now()}.${fileExt}`
       const filePath = `receipts/${fileName}`
+
       const { error: uploadError } = await supabase.storage
         .from('receipts')
         .upload(filePath, receipt)
+
       if (uploadError) throw uploadError
 
       // 2. Get the public URL of the uploaded receipt
       const { data: urlData } = supabase.storage.from('receipts').getPublicUrl(filePath)
       const receiptUrl = urlData.publicUrl
 
-      // 3. Call the atomic database function
+      // 3. Prepare order items data (with variant info)
+      const orderItems = cartItems.map(item => ({
+        product_id: item.product.id,
+        quantity: item.quantity,
+        price: item.price || item.product.price,
+        variant: item.variant || null
+      }))
+
+      // 4. Call the atomic database function
       const { data, error } = await supabase.rpc('place_order', {
         p_product_ids: cartItems.map(item => item.product.id),
         p_quantities: cartItems.map(item => item.quantity),
+        p_prices: cartItems.map(item => item.price || item.product.price), // 👈 ADD THIS LINE
+        p_variants: cartItems.map(item => item.variant || null), // 👈 ADD THIS LINE
         p_date: cartItems[0].date,
         p_customer_name: name,
         p_phone: phone,
@@ -124,7 +133,7 @@ export default function Checkout() {
 
       if (error) throw error
 
-      // 4. Handle the response
+      // 5. Handle the response
       if (data.status === 'sold_out') {
         setAlert({
           message: `Sold out! ${data.message || 'Please try another date.'}`,
@@ -132,7 +141,7 @@ export default function Checkout() {
         })
         setIsSubmitting(false)
       } else if (data.status === 'success') {
-        // --- START: TRIGGER ADMIN EMAIL ---
+        // Trigger admin email
         try {
           await supabase.functions.invoke('send-order-email', {
             body: { order_reference: data.order_reference }
@@ -140,7 +149,6 @@ export default function Checkout() {
         } catch (err) {
           console.error('Edge function error:', err)
         }
-        // --- END: TRIGGER ADMIN EMAIL ---
 
         clearCart()
         navigate(`/confirmation/${data.order_reference}`)
@@ -165,64 +173,75 @@ export default function Checkout() {
     <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] pb-32">
       {/* Sticky Header */}
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-[#F5F0E6]">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-4">
+        <div className="max-w-3xl mx-auto px-4 py-4 md:py-5 flex items-center gap-4">
           <Link to="/cart" className="text-[#1A237E] hover:text-[#E31E24] transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="text-xl font-bold text-[#1A237E] font-display">Checkout</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-[#1A237E] font-display">Checkout</h1>
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-3xl mx-auto px-4 py-6 md:py-10 space-y-6 md:space-y-8">
 
         {/* Order Summary Card */}
-        <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-[#1A237E] font-display">Order Summary</h2>
+        <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5 md:p-6">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h2 className="text-lg md:text-xl font-bold text-[#1A237E] font-display">Order Summary</h2>
             <div className="bg-[#1A237E]/10 text-[#1A237E] px-3 py-1 rounded-full text-xs font-semibold border border-[#1A237E]/20 font-body">
               {formatDateAesthetic(cartItems[0].date)}
             </div>
           </div>
 
-          <ul className="space-y-3 mb-4">
-            {cartItems.map((item, index) => (
-              <li key={index} className="flex items-center gap-3 py-2 border-b border-[#F5F0E6] last:border-0 last:pb-0">
-                <div className="w-14 h-14 rounded-xl bg-stone-100 overflow-hidden flex-shrink-0 border border-[#F5F0E6]">
-                  {item.product.image_url ? (
-                    <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-stone-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-sm font-bold text-[#1A237E] font-body leading-snug">
-                    {item.product.name}
-                  </h3>
-                  <p className="text-xs text-gray-500 font-body mt-1">Qty: {item.quantity}</p>
-                </div>
-                <span className="font-bold text-[#E31E24] font-display text-sm">RM{(item.product.price * item.quantity).toFixed(2)}</span>
-              </li>
-            ))}
+          <ul className="space-y-3 md:space-y-4 mb-4 md:mb-6">
+            {cartItems.map((item, index) => {
+              // Get the correct price for this item
+              const itemPrice = item.price || item.product.price;
+
+              return (
+                <li key={index} className="flex items-center gap-3 md:gap-4 py-2 border-b border-[#F5F0E6] last:border-0 last:pb-0">
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-stone-100 overflow-hidden flex-shrink-0 border border-[#F5F0E6]">
+                    {item.product.image_url ? (
+                      <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-400">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <h3 className="text-sm md:text-base font-bold text-[#1A237E] font-body leading-snug">
+                      {item.product.name}
+                      {/* Show variant if it exists */}
+                      {item.variant && <span className="text-xs font-normal text-gray-500 ml-1 font-body">({item.variant})</span>}
+                    </h3>
+                    <p className="text-xs text-gray-500 font-body mt-1">Qty: {item.quantity}</p>
+                  </div>
+
+                  <span className="font-bold text-[#E31E24] font-display text-sm md:text-base">
+                    RM{(itemPrice * item.quantity).toFixed(2)}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
 
           <div className="flex justify-between items-center pt-4 border-t-2 border-[#F5F0E6]">
-            <span className="text-base font-bold text-[#1A237E] font-display">Total</span>
-            <span className="text-2xl font-bold text-[#E31E24] font-display">RM{total.toFixed(2)}</span>
+            <span className="text-base md:text-lg font-bold text-[#1A237E] font-display">Total</span>
+            <span className="text-2xl md:text-3xl font-bold text-[#E31E24] font-display">RM{total.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Checkout Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
 
           {/* Customer Details Section */}
-          <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5 space-y-4">
-            <h2 className="text-lg font-bold text-[#1A237E] font-display">Customer Details</h2>
+          <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5 md:p-6 space-y-4 md:space-y-5">
+            <h2 className="text-lg md:text-xl font-bold text-[#1A237E] font-display">Customer Details</h2>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2 font-body">Full Name</label>
@@ -255,8 +274,8 @@ export default function Checkout() {
                   type="button"
                   onClick={() => setDeliveryType('pickup')}
                   className={`py-3 px-4 rounded-xl font-semibold transition-all font-display ${deliveryType === 'pickup'
-                    ? 'bg-[#E31E24] text-white shadow-lg'
-                    : 'bg-[#FDFBF7] text-gray-700 border border-[#F5F0E6] hover:bg-[#F5F0E6]'
+                      ? 'bg-[#E31E24] text-white shadow-lg'
+                      : 'bg-[#FDFBF7] text-gray-700 border border-[#F5F0E6] hover:bg-[#F5F0E6]'
                     }`}
                 >
                   Pickup
@@ -265,8 +284,8 @@ export default function Checkout() {
                   type="button"
                   onClick={() => setDeliveryType('delivery')}
                   className={`py-3 px-4 rounded-xl font-semibold transition-all font-display ${deliveryType === 'delivery'
-                    ? 'bg-[#E31E24] text-white shadow-lg'
-                    : 'bg-[#FDFBF7] text-gray-700 border border-[#F5F0E6] hover:bg-[#F5F0E6]'
+                      ? 'bg-[#E31E24] text-white shadow-lg'
+                      : 'bg-[#FDFBF7] text-gray-700 border border-[#F5F0E6] hover:bg-[#F5F0E6]'
                     }`}
                 >
                   Delivery
@@ -297,11 +316,11 @@ export default function Checkout() {
           </div>
 
           {/* Payment Section */}
-          <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5 space-y-5">
-            <h2 className="text-lg font-bold text-[#1A237E] font-display">Payment</h2>
+          <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] p-5 md:p-6 space-y-5">
+            <h2 className="text-lg md:text-xl font-bold text-[#1A237E] font-display">Payment</h2>
 
             {/* Payment Info Card */}
-            <div className="bg-gradient-to-br from-[#FDFBF7] to-[#F5F0E6] p-5 rounded-2xl border border-[#F5F0E6]">
+            <div className="bg-gradient-to-br from-[#FDFBF7] to-[#F5F0E6] p-4 md:p-5 rounded-2xl border border-[#F5F0E6]">
               <div className="flex items-center gap-2 mb-4">
                 <svg className="w-5 h-5 text-[#E31E24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -311,7 +330,6 @@ export default function Checkout() {
 
               {/* QR Code Placeholder */}
               <div className="bg-white p-4 rounded-xl border-2 border-dashed border-[#F5F0E6] mb-4 flex flex-col items-center justify-center">
-
                 <div className="w-40 h-40 rounded-lg overflow-hidden mb-3">
                   <img
                     src="/duitnow-qr.png"
@@ -319,11 +337,9 @@ export default function Checkout() {
                     className="w-full h-full object-contain"
                   />
                 </div>
-
                 <p className="text-xs text-gray-500 text-center font-body">
                   Scan to pay instantly
                 </p>
-
               </div>
 
               {/* Bank Details */}
@@ -401,12 +417,12 @@ export default function Checkout() {
       </div>
 
       {/* Sticky Bottom Submit Button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#F5F0E6] p-4 shadow-2xl z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#F5F0E6] p-4 md:p-6 shadow-2xl z-20">
         <div className="max-w-3xl mx-auto">
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="w-full bg-[#E31E24] text-white py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 rounded-2xl hover:bg-[#C41820] transition-colors shadow-lg font-display"
+            className="w-full bg-[#E31E24] text-white py-4 md:py-5 text-lg md:text-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 rounded-2xl hover:bg-[#C41820] transition-colors shadow-lg font-display"
           >
             {isSubmitting ? (
               <>

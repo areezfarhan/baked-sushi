@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { formatPhoneNumber } from '../utils/phoneFormatter';
-import ConfirmModal from '../components/ConfirmModal'; // 👈 ADD THIS
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function AdminHistory() {
   const [orders, setOrders] = useState([])
@@ -12,7 +12,6 @@ export default function AdminHistory() {
   const [sortOption, setSortOption] = useState('newest')
   const navigate = useNavigate()
   const [confirmData, setConfirmData] = useState(null);
-
   const [expandedOrder, setExpandedOrder] = useState(null);
 
   useEffect(() => {
@@ -23,13 +22,13 @@ export default function AdminHistory() {
     setLoading(true)
     let query = supabase
       .from('orders')
+      // UPDATED: Select all columns from order_items (including variant and price)
       .select('*, order_items(*, products(*))')
       .neq('status', 'pending_verification')
 
     if (filter !== 'all') {
       query = query.eq('status', filter)
     }
-
     if (sortOption === 'newest') {
       query = query.order('created_at', { ascending: false })
     } else if (sortOption === 'oldest') {
@@ -39,7 +38,6 @@ export default function AdminHistory() {
     }
 
     const { data, error } = await query
-
     if (error) {
       console.error('Error fetching history:', error)
     } else {
@@ -62,18 +60,10 @@ export default function AdminHistory() {
       message: "This will permanently delete this order from your history.",
       confirmText: "Delete",
       onConfirm: async () => {
-        const { error } = await supabase
-          .from('orders')
-          .delete()
-          .eq('id', orderId)
-
-        if (error) {
-          console.error('Error deleting order:', error)
-          alert('Error deleting order') // Fallback for unexpected errors
-        } else {
-          fetchOrders()
-        }
-        setConfirmData(null) // Close modal
+        const { error } = await supabase.from('orders').delete().eq('id', orderId)
+        if (error) console.error('Error deleting order:', error)
+        else fetchOrders()
+        setConfirmData(null)
       }
     })
   }
@@ -84,18 +74,10 @@ export default function AdminHistory() {
       message: "WARNING: This will permanently delete ALL history orders. This action cannot be undone.",
       confirmText: "Clear All",
       onConfirm: async () => {
-        const { error } = await supabase
-          .from('orders')
-          .delete()
-          .neq('status', 'pending_verification')
-
-        if (error) {
-          console.error('Error clearing history:', error)
-          alert('Error clearing history') // Fallback
-        } else {
-          fetchOrders()
-        }
-        setConfirmData(null) // Close modal
+        const { error } = await supabase.from('orders').delete().neq('status', 'pending_verification')
+        if (error) console.error('Error clearing history:', error)
+        else fetchOrders()
+        setConfirmData(null)
       }
     })
   }
@@ -108,15 +90,19 @@ export default function AdminHistory() {
       order.customer_name,
       order.phone,
       new Date(order.delivery_date).toLocaleDateString(),
-      order.order_items?.map(item => `${item.products?.name} x${item.quantity}`).join(', ') || '',
+      // UPDATED: Include variant in CSV export
+      order.order_items?.map(item => `${item.products?.name}${item.variant ? ` (${item.variant})` : ''} x${item.quantity}`).join(', ') || '',
       `RM${Number(order.total_amount).toFixed(2)}`,
       order.status,
       new Date(order.created_at).toLocaleString()
     ])
+    // ... rest of the CSV code remains the same
+
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n')
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
@@ -157,12 +143,12 @@ export default function AdminHistory() {
     setExpandedOrder(expandedOrder === id ? null : id);
   };
 
-  // 👇 ADD THIS REVENUE CALCULATION 👇
   const calculateRevenue = () => {
     return orders
       .filter(order => order.status === 'payment_confirmed')
       .reduce((sum, order) => sum + Number(order.total_amount), 0)
   }
+
   const totalRevenue = calculateRevenue()
 
   if (loading) {
@@ -180,23 +166,20 @@ export default function AdminHistory() {
     <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] pb-24">
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4">
+        <div className="max-w-5xl mx-auto px-4 md:px-8 py-4">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Logo" className="h-9 w-auto object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-text-main">Order History</h1>
-              <p className="text-sm text-gray-500">{orders.length} order{orders.length !== 1 ? 's' : ''} found</p>
+              <h1 className="text-xl font-bold text-[#1A237E] font-display">Order History</h1>
+              <p className="text-sm text-gray-500 font-body">{orders.length} order{orders.length !== 1 ? 's' : ''} found</p>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        {/* Top Action Buttons */}
-        {/* Top Row: Actions (Left) and Revenue (Right) */}
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 space-y-6">
+        {/* Top Row: Actions and Revenue */}
         <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-
-          {/* Left Column: Action Buttons */}
           <div className="flex gap-3 w-full md:w-auto">
             <button
               onClick={exportToCSV}
@@ -215,8 +198,6 @@ export default function AdminHistory() {
               Clear All
             </button>
           </div>
-
-          {/* Right Column: Total Revenue Card */}
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4 w-full md:w-auto">
             <div className="bg-green-100 p-3 rounded-full">
               <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,16 +208,13 @@ export default function AdminHistory() {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 {monthFilter === 'all' ? 'Total Lifetime Revenue' : `Revenue for ${monthFilter}`}
               </p>
-              <p className="text-xl font-bold text-gray-900">
-                RM {totalRevenue.toFixed(2)}
-              </p>
+              <p className="text-xl font-bold text-gray-900">RM {totalRevenue.toFixed(2)}</p>
             </div>
           </div>
-
         </div>
+
         {/* Filters Section */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 space-y-4">
-          {/* Status Pills */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Status</label>
             <div className="flex overflow-x-auto gap-2 pb-1 no-scrollbar">
@@ -259,8 +237,6 @@ export default function AdminHistory() {
               ))}
             </div>
           </div>
-
-          {/* Month & Sort Dropdowns */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Month</label>
@@ -293,7 +269,7 @@ export default function AdminHistory() {
         {/* Orders Feed */}
         {orders.length === 0 ? (
           <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-200 text-center">
-            <div className="text-6xl mb-4"></div>
+            <div className="text-6xl mb-4">📭</div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">No History Orders</h2>
             <p className="text-gray-500 text-sm">Orders will appear here after approval, rejection, or expiry.</p>
           </div>
@@ -308,8 +284,6 @@ export default function AdminHistory() {
                       <span className="font-bold text-gray-900 text-lg">{order.order_reference}</span>
                       <span className="text-xs text-gray-400">#{index + 1}</span>
                     </div>
-
-                    {/* 👇 NEW: Order Creation Timestamp 👇 */}
                     <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -317,7 +291,6 @@ export default function AdminHistory() {
                       Placed: {new Date(order.created_at).toLocaleString('en-MY', { dateStyle: 'medium', timeStyle: 'short' })}
                     </p>
                   </div>
-
                   <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusStyles(order.status)}`}>
                     {order.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
@@ -347,7 +320,7 @@ export default function AdminHistory() {
                     </div>
                   </div>
 
-                  {/* Expandable Address Section - Only for Delivery Orders */}
+                  {/* Expandable Address Section */}
                   {order.delivery_type === 'delivery' && (
                     <div className="pl-13">
                       <button
@@ -359,7 +332,6 @@ export default function AdminHistory() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
-
                       {expandedOrder === order.id && (
                         <div className="mt-2 p-3 bg-[#FDFBF7] rounded-xl border border-[#F5F0E6] text-sm text-gray-700 flex items-start gap-2 animate-fade-in">
                           <svg className="w-4 h-4 text-[#E31E24] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -372,12 +344,16 @@ export default function AdminHistory() {
                     </div>
                   )}
 
-                  {/* Items */}
+                  {/* Items - UPDATED to show Variant */}
                   <div className="border-t border-gray-100 pt-3">
                     <div className="space-y-1">
                       {order.order_items && order.order_items.map((item, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
-                          <span className="text-gray-600">{item.products?.name}</span>
+                          {/* UPDATED: Show variant in parentheses if it exists */}
+                          <span className="text-gray-600">
+                            {item.products?.name}
+                            {item.variant && <span className="text-gray-400 text-xs ml-1">({item.variant})</span>}
+                          </span>
                           <span className="font-medium text-gray-900">x{item.quantity}</span>
                         </div>
                       ))}
@@ -439,7 +415,7 @@ export default function AdminHistory() {
           </div>
         </div>
       </nav>
-      {/* 👇 ADD THIS CONFIRMATION MODAL 👇 */}
+
       <ConfirmModal
         isOpen={!!confirmData}
         onClose={() => setConfirmData(null)}

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useCart } from '../context/CartContext'
 import AlertModal from '../components/AlertModal'
+
 
 // Helper to format date as YYYY-MM-DD
 const formatDate = (date) => {
@@ -17,12 +18,16 @@ const getProteinType = (name) => {
   if (lower.includes('salmon') || lower.includes('tuna')) return 'salmon'
   if (lower.includes('prawn')) return 'prawn'
   if (lower.includes('chicken') || lower.includes('teriyaki')) return 'chicken'
+  if (lower.includes('beef') || lower.includes('daging')) return 'beef'
   return 'salmon'
 }
 
 export default function Product() {
   const { id } = useParams()
-  const { cartItems, addToCart, alert, closeAlert } = useCart()
+  const navigate = useNavigate()
+  const { cartItems, addToCart } = useCart()
+  const [alert, setAlert] = useState(null)
+  const closeAlert = () => setAlert(null)
   const [product, setProduct] = useState(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [quantity, setQuantity] = useState(1)
@@ -31,6 +36,12 @@ export default function Product() {
   const [availableDates, setAvailableDates] = useState([])
   const [stockLevels, setStockLevels] = useState({})
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [searchParams] = useSearchParams()
+  const category = searchParams.get('category') || 'sushi'
+
+
+  // NEW: State for handling variants (e.g., Beef vs Chicken)
+  const [selectedVariant, setSelectedVariant] = useState(null)
 
   useEffect(() => {
     if (id) {
@@ -43,7 +54,7 @@ export default function Product() {
     if (selectedDate && product) {
       fetchStockForDate()
     }
-  }, [selectedDate, product, cartItems])
+  }, [selectedDate, product, cartItems, selectedVariant]) //  Added selectedVariant
 
   const fetchProduct = async () => {
     setLoading(true)
@@ -59,6 +70,12 @@ export default function Product() {
         setProduct(null)
       } else {
         setProduct(data)
+        // NEW: If product has variants, select the first one by default
+        if (data.variants && data.variants.length > 0) {
+          setSelectedVariant(data.variants[0])
+        } else {
+          setSelectedVariant(null)
+        }
       }
     } catch (err) {
       console.error('Unexpected error:', err)
@@ -74,7 +91,7 @@ export default function Product() {
       const klString = now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
       const klDate = new Date(klString)
       const today = `${klDate.getFullYear()}-${String(klDate.getMonth() + 1).padStart(2, '0')}-${String(klDate.getDate()).padStart(2, '0')}`
-      
+
       const { data, error } = await supabase
         .from('stock_by_date')
         .select('date, remaining_stock')
@@ -105,7 +122,6 @@ export default function Product() {
       setRemainingStock(0)
       return
     }
-
     try {
       const { data, error } = await supabase
         .from('stock_by_date')
@@ -115,22 +131,29 @@ export default function Product() {
         .single()
 
       if (error || !data) {
-         setRemainingStock(0)
-         return
-       }
+        setRemainingStock(0)
+        return
+      }
 
-       const cartItemsForThisProduct = cartItems.filter(item =>
-         item.product.id === id && item.date === selectedDate
-       )
-       const alreadyInCart = cartItemsForThisProduct.reduce((sum, item) =>
-         sum + item.quantity, 0
-       )
-       const availableStock = data.remaining_stock - alreadyInCart
-       setRemainingStock(Math.max(0, availableStock))
-     } catch (err) {
-       console.error('Unexpected error fetching stock:', err)
-       setRemainingStock(0)
-     }
+      // FIX: Normalize variant comparison so null/undefined match correctly for Sushi
+      const currentVariantName = selectedVariant?.name || null;
+
+      const cartItemsForThisProduct = cartItems.filter(item =>
+        item.product.id === id &&
+        item.date === selectedDate &&
+        (item.variant || null) === currentVariantName
+      )
+
+      const alreadyInCart = cartItemsForThisProduct.reduce((sum, item) =>
+        sum + item.quantity, 0
+      )
+
+      const availableStock = data.remaining_stock - alreadyInCart
+      setRemainingStock(Math.max(0, availableStock))
+    } catch (err) {
+      console.error('Unexpected error fetching stock:', err)
+      setRemainingStock(0)
+    }
   }
 
   const handleAddToCart = async () => {
@@ -138,7 +161,6 @@ export default function Product() {
       alert('Please select a date')
       return
     }
-
     try {
       const { data: stockData, error } = await supabase
         .from('stock_by_date')
@@ -148,32 +170,47 @@ export default function Product() {
         .single()
 
       if (error || !stockData) {
-         alert('Stock information not available.')
-         return
-       }
+        alert('Stock information not available.')
+        return
+      }
 
-       const databaseStock = stockData.remaining_stock
-       const existingInCart = cartItems
-         .filter(item => item.product.id === id && item.date === selectedDate)
-         .reduce((sum, item) => sum + item.quantity, 0)
+      const databaseStock = stockData.remaining_stock
 
-       const maxCanAdd = databaseStock - existingInCart
+      // FIX: Use the same normalized variant comparison here
+      const currentVariantName = selectedVariant?.name || null;
+      const existingInCart = cartItems
+        .filter(item =>
+          item.product.id === id &&
+          item.date === selectedDate &&
+          (item.variant || null) === currentVariantName
+        )
+        .reduce((sum, item) => sum + item.quantity, 0)
 
-       if (maxCanAdd <= 0) {
-         alert(`Sold Out. You already have ${existingInCart} in cart.`)
-         return
-       }
+      const maxCanAdd = databaseStock - existingInCart
+      if (maxCanAdd <= 0) {
+        alert(`Sold Out. You already have ${existingInCart} in cart.`)
+        return
+      }
+      if (quantity > maxCanAdd) {
+        alert(`You can only add ${maxCanAdd} more. You have ${existingInCart} in cart.`)
+        return
+      }
 
-       if (quantity > maxCanAdd) {
-         alert(`You can only add ${maxCanAdd} more. You have ${existingInCart} in cart.`)
-         return
-       }
+      addToCart(
+        product,
+        selectedDate,
+        quantity,
+        databaseStock,
+        selectedVariant?.name,
+        selectedVariant?.price || product.price
+      )
 
-       addToCart(product, selectedDate, quantity, databaseStock)
-     } catch (err) {
-       console.error('Error in handleAddToCart:', err)
-       alert('Failed to add to cart. Please try again.')
-     }
+      // Manual update for immediate UI feedback
+      setRemainingStock(prev => prev - quantity)
+    } catch (err) {
+      console.error('Error in handleAddToCart:', err)
+      alert('Failed to add to cart. Please try again.')
+    }
   }
 
   const now = new Date()
@@ -207,6 +244,11 @@ export default function Product() {
   const firstDay = getFirstDayOfMonth(year, month)
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
 
+  // NEW: Calculate the current price based on selected variant
+  const currentPrice = selectedVariant ? selectedVariant.price : product?.price;
+  // NEW: Determine weight text based on category
+  const weightText = product?.category === 'sushi' ? '280g' : (product?.name === 'Baked Potato Salad' ? '700g' : '11 Inch');
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] flex items-center justify-center">
@@ -229,7 +271,7 @@ export default function Product() {
       {/* Header / Back Button */}
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-[#F5F0E6]">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center">
-          <Link to="/" className="text-[#1A237E] hover:text-[#E31E24] transition-colors flex items-center gap-2 font-bold font-display">
+          <Link to={`/?category=${category}`} className="text-[#1A237E] hover:text-[#E31E24] transition-colors flex items-center gap-2 font-bold font-display">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -239,7 +281,7 @@ export default function Product() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        
+
         {/* Product Image & Info Card */}
         <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] overflow-hidden">
           <div className="w-full bg-stone-100">
@@ -253,58 +295,84 @@ export default function Product() {
               </div>
             )}
           </div>
-          
-          <div className="p-5">
-            <h1 className="text-3xl font-bold text-[#1A237E] font-display">{product.name}</h1>
-            <p className="text-[15px] text-gray-600 mt-4 mb-6 leading-[1.75] font-body">{product.description}</p>
-            
+
+          <div className="p-5 md:p-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-[#1A237E] font-display">{product.name}</h1>
+            <p className="text-[15px] md:text-base text-gray-600 mt-4 mb-6 leading-[1.75] font-body">{product.description}</p>
+
             <div className="mt-6 pt-6 border-t-2 border-[#F5F0E6] flex items-baseline justify-between">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-[#E31E24] font-display">RM{Number(product.price).toFixed(2)}</span>
-                <span className="text-sm text-gray-500 font-body">• 280g</span>
+                {/* UPDATED: Price now updates dynamically based on selected variant */}
+                <span className="text-3xl md:text-4xl font-bold text-[#E31E24] font-display">RM{Number(currentPrice).toFixed(2)}</span>
+                <span className="text-sm md:text-base text-gray-500 font-body">• {weightText}</span>
               </div>
             </div>
 
-            <div className="mt-4 p-4 bg-gradient-to-r from-[#FDFBF7] to-[#F5F0E6] rounded-2xl border border-[#F5F0E6] flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#E31E24]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-[#E31E24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+            {/* NEW: Variant Selector (Only shows if product has variants) */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg md:text-xl font-bold text-[#1A237E] mb-3 md:mb-4 font-display">Choose Your Variant</h3>
+
+                {/* CHANGED: Use grid grid-cols-2 to force side-by-side layout */}
+                <div className="grid grid-cols-2 gap-3">
+                  {product.variants.map((variant) => (
+                    <button
+                      key={variant.name}
+                      onClick={() => setSelectedVariant(variant)}
+                      className={`w-full py-3 px-2 rounded-xl font-bold text-sm md:text-base transition-all font-display border-2 flex items-center justify-center gap-2 ${selectedVariant?.name === variant.name
+                        ? 'bg-[#1A237E] text-white border-[#1A237E] shadow-md'
+                        : 'bg-white text-[#1A237E] border-[#F5F0E6] hover:border-[#1A237E]'
+                        }`}
+                    >
+                      <span>{variant.name}</span>
+                      <span className="opacity-80 text-xs md:text-sm">RM{variant.price.toFixed(2)}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800 font-display">Includes Free Seaweed</p>
-                <p className="text-xs text-gray-500 font-body">1x 4g Laverland Crunch (Sea Salt)</p>
+            )}
+
+            {/* UPDATED: Only show seaweed note for Sushi category */}
+            {product.category === 'sushi' && (
+              <div className="mt-4 p-4 md:p-5 bg-gradient-to-r from-[#FDFBF7] to-[#F5F0E6] rounded-2xl border border-[#F5F0E6] flex items-center gap-3">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-[#E31E24]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 md:w-6 md:h-6 text-[#E31E24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm md:text-base font-semibold text-gray-800 font-display">Includes Free Seaweed</p>
+                  <p className="text-xs md:text-sm text-gray-500 font-body">1x 4g Laverland Crunch (Sea Salt)</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* --- DESKTOP LAYOUT CHANGE: Flex Container for Calendar & Quantity --- */}
-        {/* flex-col = stacked on mobile. md:flex-row = side-by-side on desktop. */}
+        {/* Calendar & Quantity Layout (Flex for Desktop) */}
         <div className="flex flex-col md:flex-row gap-6">
-          
+
           {/* Calendar Section */}
-          {/* w-full on mobile. md:w-2/3 takes up 2/3 of the row on desktop. */}
-          <div className={`bg-white p-5 rounded-3xl shadow-xl border-2 border-[#F5F0E6] ${selectedDate ? 'w-full md:w-2/3' : 'w-full'}`}>
-            <h3 className="text-lg font-bold text-[#1A237E] mb-5 font-display">Select Delivery Date</h3>
-            
+          <div className={`bg-white p-5 md:p-8 rounded-3xl shadow-xl border-2 border-[#F5F0E6] ${selectedDate ? 'w-full md:w-2/3' : 'w-full'}`}>
+            <h3 className="text-lg md:text-xl font-bold text-[#1A237E] mb-5 md:mb-6 font-display">Select Delivery Date</h3>
+
             <div className="flex justify-between items-center mb-6">
               <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-[#F5F0E6] text-[#1A237E] transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
               </button>
-              <h4 className="text-lg font-semibold text-[#1A237E] font-display">{monthName}</h4>
+              <h4 className="text-lg md:text-xl font-semibold text-[#1A237E] font-display">{monthName}</h4>
               <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-[#F5F0E6] text-[#1A237E] transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>
             </div>
 
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-gray-400 mb-3 font-display">
+            <div className="grid grid-cols-7 gap-2 md:gap-3 text-center text-xs md:text-sm font-semibold text-gray-400 mb-3 font-display">
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
                 <div key={i}>{day}</div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-2 md:gap-3">
               {Array.from({ length: firstDay }).map((_, i) => (
                 <div key={`empty-${i}`}></div>
               ))}
@@ -322,9 +390,27 @@ export default function Product() {
                 return (
                   <div
                     key={dateKey}
-                    onClick={() => isSelectable && setSelectedDate(dateKey)}
+                    onClick={() => {
+                      if (!isSelectable) return
+
+                      // Check if cart has items with a different date
+                      if (cartItems.length > 0) {
+                        const cartDates = [...new Set(cartItems.map(item => item.date))]
+
+                        // If cart has items and the new date is different from existing cart dates
+                        if (cartDates.length > 0 && !cartDates.includes(dateKey)) {
+                          setAlert({
+                            message: 'You can only order for one delivery date at a time! Please clear your cart first or complete your current order.',
+                            type: 'warning'
+                          })
+                          return
+                        }
+                      }
+
+                      setSelectedDate(dateKey)
+                    }}
                     className={`
-                      aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-all font-display
+                      aspect-square flex items-center justify-center rounded-xl text-sm md:text-base font-medium transition-all font-display
                       ${!isSelectable ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'cursor-pointer'}
                       ${isSelected ? 'ring-2 ring-[#1A237E] ring-offset-2' : ''}
                       ${isSelectable && stock >= 5 ? 'bg-[#1A237E] text-white hover:bg-[#1A237E]/90' : ''}
@@ -337,7 +423,7 @@ export default function Product() {
               })}
             </div>
 
-            <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs text-gray-500 font-body">
+            <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs md:text-sm text-gray-500 font-body">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-[#1A237E]"></div>
                 <span>Available</span>
@@ -354,12 +440,11 @@ export default function Product() {
           </div>
 
           {/* Quantity Section */}
-          {/* Only renders if a date is selected. w-full on mobile, md:w-1/3 on desktop. */}
           {selectedDate && (
-            <div className="w-full md:w-1/3 bg-white p-5 rounded-3xl shadow-xl border-2 border-[#F5F0E6] space-y-6">
+            <div className="w-full md:w-1/3 bg-white p-5 md:p-8 rounded-3xl shadow-xl border-2 border-[#F5F0E6] space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-[#1A237E] font-display">Quantity</h3>
-                <span className="text-sm font-medium text-[#1A237E] bg-[#1A237E]/10 px-3 py-1 rounded-full font-body">
+                <h3 className="text-lg md:text-xl font-bold text-[#1A237E] font-display">Quantity</h3>
+                <span className="text-sm md:text-base font-medium text-[#1A237E] bg-[#1A237E]/10 px-3 py-1 rounded-full font-body">
                   {selectedDate}
                 </span>
               </div>
@@ -367,14 +452,14 @@ export default function Product() {
               <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#F5F0E6]">
                 {remainingStock > 0 ? (
                   <p className="text-gray-700 font-medium font-body">
-                    <span className="text-gray-500">Available:</span> 
-                    <span className="text-[#E31E24] font-bold text-lg ml-1 font-display">{remainingStock} left</span>
+                    <span className="text-gray-500">Available:</span>
+                    <span className="text-[#E31E24] font-bold text-lg md:text-xl ml-1 font-display">{remainingStock} left</span>
                   </p>
                 ) : (
                   <p className="text-[#E31E24] font-bold font-display">Sold Out for this date.</p>
                 )}
                 {cartItems.some(item => item.product.id === id && item.date === selectedDate) && (
-                  <p className="text-xs text-gray-500 mt-1 font-body">
+                  <p className="text-xs md:text-sm text-gray-500 mt-1 font-body">
                     (You already have {cartItems.filter(i => i.product.id === id && i.date === selectedDate).reduce((s, i) => s + i.quantity, 0)} in your cart)
                   </p>
                 )}
@@ -386,16 +471,16 @@ export default function Product() {
                     type="button"
                     onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
                     disabled={quantity <= 1}
-                    className="w-12 h-12 rounded-xl bg-white border border-[#F5F0E6] text-[#1A237E] font-bold text-xl flex items-center justify-center hover:bg-[#F5F0E6] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm font-display"
+                    className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-white border border-[#F5F0E6] text-[#1A237E] font-bold text-xl flex items-center justify-center hover:bg-[#F5F0E6] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm font-display"
                   >
                     −
                   </button>
-                  <span className="text-2xl font-bold text-[#1A237E] w-12 text-center font-display">{quantity}</span>
+                  <span className="text-2xl md:text-3xl font-bold text-[#1A237E] w-12 text-center font-display">{quantity}</span>
                   <button
                     type="button"
                     onClick={() => setQuantity(prev => Math.min(remainingStock, prev + 1))}
                     disabled={quantity >= remainingStock}
-                    className="w-12 h-12 rounded-xl bg-[#E31E24] text-white font-bold text-xl flex items-center justify-center hover:bg-[#E31E24]/90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm font-display"
+                    className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-[#E31E24] text-white font-bold text-xl flex items-center justify-center hover:bg-[#E31E24]/90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm font-display"
                   >
                     +
                   </button>
@@ -408,14 +493,15 @@ export default function Product() {
 
       {/* Sticky Bottom Action Bar */}
       {selectedDate && remainingStock > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#F5F0E6] p-4 shadow-2xl z-20">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-[#F5F0E6] p-4 md:p-6 shadow-2xl z-20">
           <div className="max-w-3xl mx-auto">
             <button
               onClick={handleAddToCart}
-              className="w-full bg-[#E31E24] text-white py-4 text-lg font-bold flex items-center justify-center gap-2 rounded-2xl hover:bg-[#C41820] transition-colors shadow-lg font-display"
+              className="w-full bg-[#E31E24] text-white py-4 md:py-5 text-lg md:text-xl font-bold flex items-center justify-center gap-2 rounded-2xl hover:bg-[#C41820] transition-colors shadow-lg font-display"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-              Add to Cart • RM{(product.price * quantity).toFixed(2)}
+              <svg className="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              {/* UPDATED: Price in button updates dynamically */}
+              Add to Cart • RM{(currentPrice * quantity).toFixed(2)}
             </button>
           </div>
         </div>

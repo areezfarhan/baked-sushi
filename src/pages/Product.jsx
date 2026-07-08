@@ -118,100 +118,115 @@ export default function Product() {
   }
 
   const fetchStockForDate = async () => {
-    if (!selectedDate || !id) {
+  if (!selectedDate || !id) {
+    setRemainingStock(0)
+    return
+  }
+  try {
+    const { data, error } = await supabase
+      .from('stock_by_date')
+      .select('remaining_stock, variant_stock') // <-- ADDED variant_stock here
+      .eq('product_id', id)
+      .eq('date', selectedDate)
+      .single()
+
+    if (error || !data) {
       setRemainingStock(0)
       return
     }
-    try {
-      const { data, error } = await supabase
-        .from('stock_by_date')
-        .select('remaining_stock')
-        .eq('product_id', id)
-        .eq('date', selectedDate)
-        .single()
 
-      if (error || !data) {
-        setRemainingStock(0)
-        return
+    // Determine the correct stock limit
+    let baseStock = data.remaining_stock // Default to total (for Sushi/non-variant)
+
+    // If product has variants and one is selected, use the specific variant stock
+    if (selectedVariant && data.variant_stock) {
+      const variantStock = data.variant_stock[selectedVariant.name]
+      if (variantStock !== undefined) {
+        baseStock = variantStock // Use the 5 from admin, not 10
       }
-
-      // FIX: Normalize variant comparison so null/undefined match correctly for Sushi
-      const currentVariantName = selectedVariant?.name || null;
-
-      const cartItemsForThisProduct = cartItems.filter(item =>
-        item.product.id === id &&
-        item.date === selectedDate &&
-        (item.variant || null) === currentVariantName
-      )
-
-      const alreadyInCart = cartItemsForThisProduct.reduce((sum, item) =>
-        sum + item.quantity, 0
-      )
-
-      const availableStock = data.remaining_stock - alreadyInCart
-      setRemainingStock(Math.max(0, availableStock))
-    } catch (err) {
-      console.error('Unexpected error fetching stock:', err)
-      setRemainingStock(0)
     }
+
+    // Filter cart items for this specific product, date, AND variant
+    const cartItemsForThisProduct = cartItems.filter(item =>
+      item.product.id === id &&
+      item.date === selectedDate &&
+      (selectedVariant ? item.variant === selectedVariant.name : true)
+    )
+
+    const alreadyInCart = cartItemsForThisProduct.reduce((sum, item) =>
+      sum + item.quantity, 0
+    )
+
+    const availableStock = baseStock - alreadyInCart
+    setRemainingStock(Math.max(0, availableStock))
+  } catch (err) {
+    console.error('Unexpected error fetching stock:', err)
+    setRemainingStock(0)
   }
+}
 
   const handleAddToCart = async () => {
-    if (!selectedDate || !id) {
-      alert('Please select a date')
+  if (!selectedDate || !id) {
+    alert('Please select a date')
+    return
+  }
+  try {
+    const { data: stockData, error } = await supabase
+      .from('stock_by_date')
+      .select('remaining_stock')
+      .eq('product_id', id)
+      .eq('date', selectedDate)
+      .single()
+
+    if (error || !stockData) {
+      alert('Stock information not available.')
       return
     }
-    try {
-      const { data: stockData, error } = await supabase
-        .from('stock_by_date')
-        .select('remaining_stock')
-        .eq('product_id', id)
-        .eq('date', selectedDate)
-        .single()
 
-      if (error || !stockData) {
-        alert('Stock information not available.')
-        return
+    // FIX: Use variant stock for validation
+    let databaseStock = stockData.remaining_stock
+    if (selectedVariant && product?.variants && product.variants.length > 0) {
+      const variantData = product.variants.find(v => v.name === selectedVariant.name)
+      if (variantData && variantData.stock !== undefined) {
+        databaseStock = variantData.stock
       }
-
-      const databaseStock = stockData.remaining_stock
-
-      // FIX: Use the same normalized variant comparison here
-      const currentVariantName = selectedVariant?.name || null;
-      const existingInCart = cartItems
-        .filter(item =>
-          item.product.id === id &&
-          item.date === selectedDate &&
-          (item.variant || null) === currentVariantName
-        )
-        .reduce((sum, item) => sum + item.quantity, 0)
-
-      const maxCanAdd = databaseStock - existingInCart
-      if (maxCanAdd <= 0) {
-        alert(`Sold Out. You already have ${existingInCart} in cart.`)
-        return
-      }
-      if (quantity > maxCanAdd) {
-        alert(`You can only add ${maxCanAdd} more. You have ${existingInCart} in cart.`)
-        return
-      }
-
-      addToCart(
-        product,
-        selectedDate,
-        quantity,
-        databaseStock,
-        selectedVariant?.name,
-        selectedVariant?.price || product.price
-      )
-
-      // Manual update for immediate UI feedback
-      setRemainingStock(prev => prev - quantity)
-    } catch (err) {
-      console.error('Error in handleAddToCart:', err)
-      alert('Failed to add to cart. Please try again.')
     }
+
+    // FIX: Filter cart by variant for accurate count
+    const existingInCart = cartItems
+      .filter(item => 
+        item.product.id === id && 
+        item.date === selectedDate &&
+        (selectedVariant ? item.variant === selectedVariant.name : true)
+      )
+      .reduce((sum, item) => sum + item.quantity, 0)
+
+    const maxCanAdd = databaseStock - existingInCart
+    if (maxCanAdd <= 0) {
+      alert(`Sold Out. You already have ${existingInCart} in cart.`)
+      return
+    }
+    if (quantity > maxCanAdd) {
+      alert(`You can only add ${maxCanAdd} more. You have ${existingInCart} in cart.`)
+      return
+    }
+
+    addToCart(
+      product,
+      selectedDate,
+      quantity,
+      databaseStock,
+      selectedVariant?.name,
+      selectedVariant?.price || product.price
+    )
+
+    // Manual update for immediate UI feedback
+    setRemainingStock(prev => prev - quantity)
+  } catch (err) {
+    console.error('Error in handleAddToCart:', err)
+    alert('Failed to add to cart. Please try again.')
   }
+}
 
   const now = new Date()
   const klString = now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })

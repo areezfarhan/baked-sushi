@@ -169,11 +169,13 @@ export default function AdminInventory() {
     setLoading(true)
     try {
       const stockData = []
+      const productsToUpdate = []
 
       products.forEach(product => {
         if (product.variants && product.variants.length > 0) {
           const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0)
-          // Create variant_stock object: {"Prawn": 5, "Chicken": 3}
+
+          // Create variant stock object
           const variantStockObj = {}
           product.variants.forEach(v => {
             variantStockObj[v.name] = v.stock
@@ -184,7 +186,12 @@ export default function AdminInventory() {
             date: selectedDate,
             total_stock: totalStock,
             remaining_stock: totalStock,
-            variant_stock: variantStockObj // Save variant stock per date
+            variant_stock: variantStockObj
+          })
+
+          productsToUpdate.push({
+            id: product.id,
+            variants: product.variants
           })
         } else {
           stockData.push({
@@ -196,11 +203,34 @@ export default function AdminInventory() {
         }
       })
 
+      // Remove duplicates by product_id + date
+      const uniqueStockData = []
+      const seen = new Set()
+      for (const item of stockData) {
+        const key = `${item.product_id}-${item.date}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          uniqueStockData.push(item)
+        }
+      }
+
+      // Save stock_by_date with deduplicated data
       const { error: stockError } = await supabase
         .from('stock_by_date')
-        .upsert(stockData, { onConflict: 'product_id, date' })
+        .upsert(uniqueStockData, { onConflict: 'product_id, date' })
 
       if (stockError) throw stockError
+
+      // Update variants in products table
+      if (productsToUpdate.length > 0) {
+        for (const product of productsToUpdate) {
+          const { error: variantError } = await supabase
+            .from('products')
+            .update({ variants: product.variants })
+            .eq('id', product.id)
+          if (variantError) throw variantError
+        }
+      }
 
       setAlert({
         message: 'Stock updated successfully!',

@@ -311,15 +311,19 @@ export default function Checkout() {
 
               {/* QR Code Placeholder */}
               <div className="bg-white p-4 rounded-xl border-2 border-dashed border-[#F5F0E6] mb-4 flex flex-col items-center justify-center">
-                <div className="w-40 h-40 bg-stone-100 rounded-lg flex items-center justify-center mb-3">
-                  <div className="text-center">
-                    <svg className="w-12 h-12 text-stone-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                    </svg>
-                    <p className="text-xs text-gray-400 font-body">QR Code</p>
-                  </div>
+
+                <div className="w-40 h-40 rounded-lg overflow-hidden mb-3">
+                  <img
+                    src="/duitnow-qr.png"
+                    alt="DuitNow QR Code"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
-                <p className="text-xs text-gray-500 text-center font-body">Scan to pay instantly</p>
+
+                <p className="text-xs text-gray-500 text-center font-body">
+                  Scan to pay instantly
+                </p>
+
               </div>
 
               {/* Bank Details */}
@@ -339,7 +343,7 @@ export default function Checkout() {
                   </svg>
                   <div>
                     <p className="text-gray-500 text-xs font-medium font-body">Account Number</p>
-                    <p className="text-[#1A237E] font-bold font-display">1234567890</p>
+                    <p className="text-[#1A237E] font-bold font-display">1627 5914 6547</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -348,7 +352,7 @@ export default function Checkout() {
                   </svg>
                   <div>
                     <p className="text-gray-500 text-xs font-medium font-body">Account Name</p>
-                    <p className="text-[#1A237E] font-bold font-display">Opah's Cafe Owner</p>
+                    <p className="text-[#1A237E] font-bold font-display">Mumtazah Darajat Binti Ahmad</p>
                   </div>
                 </div>
               </div>

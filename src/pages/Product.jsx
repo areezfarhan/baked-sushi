@@ -74,6 +74,7 @@ export default function Product() {
       const klString = now.toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
       const klDate = new Date(klString)
       const today = `${klDate.getFullYear()}-${String(klDate.getMonth() + 1).padStart(2, '0')}-${String(klDate.getDate()).padStart(2, '0')}`
+      
       const { data, error } = await supabase
         .from('stock_by_date')
         .select('date, remaining_stock')
@@ -85,6 +86,7 @@ export default function Product() {
         console.error('Error fetching available dates:', error)
         return
       }
+
       if (data) {
         setAvailableDates(data.map(d => d.date))
         const levels = {}
@@ -103,6 +105,7 @@ export default function Product() {
       setRemainingStock(0)
       return
     }
+
     try {
       const { data, error } = await supabase
         .from('stock_by_date')
@@ -112,21 +115,22 @@ export default function Product() {
         .single()
 
       if (error || !data) {
-        setRemainingStock(0)
-        return
-      }
-      const cartItemsForThisProduct = cartItems.filter(item =>
-        item.product.id === id && item.date === selectedDate
-      )
-      const alreadyInCart = cartItemsForThisProduct.reduce((sum, item) =>
-        sum + item.quantity, 0
-      )
-      const availableStock = data.remaining_stock - alreadyInCart
-      setRemainingStock(Math.max(0, availableStock))
-    } catch (err) {
-      console.error('Unexpected error fetching stock:', err)
-      setRemainingStock(0)
-    }
+         setRemainingStock(0)
+         return
+       }
+
+       const cartItemsForThisProduct = cartItems.filter(item =>
+         item.product.id === id && item.date === selectedDate
+       )
+       const alreadyInCart = cartItemsForThisProduct.reduce((sum, item) =>
+         sum + item.quantity, 0
+       )
+       const availableStock = data.remaining_stock - alreadyInCart
+       setRemainingStock(Math.max(0, availableStock))
+     } catch (err) {
+       console.error('Unexpected error fetching stock:', err)
+       setRemainingStock(0)
+     }
   }
 
   const handleAddToCart = async () => {
@@ -134,6 +138,7 @@ export default function Product() {
       alert('Please select a date')
       return
     }
+
     try {
       const { data: stockData, error } = await supabase
         .from('stock_by_date')
@@ -143,28 +148,32 @@ export default function Product() {
         .single()
 
       if (error || !stockData) {
-        alert('Stock information not available.')
-        return
-      }
-      const databaseStock = stockData.remaining_stock
-      const existingInCart = cartItems
-        .filter(item => item.product.id === id && item.date === selectedDate)
-        .reduce((sum, item) => sum + item.quantity, 0)
-      const maxCanAdd = databaseStock - existingInCart
+         alert('Stock information not available.')
+         return
+       }
 
-      if (maxCanAdd <= 0) {
-        alert(`Sold Out. You already have ${existingInCart} in cart.`)
-        return
-      }
-      if (quantity > maxCanAdd) {
-        alert(`You can only add ${maxCanAdd} more. You have ${existingInCart} in cart.`)
-        return
-      }
-      addToCart(product, selectedDate, quantity, databaseStock)
-    } catch (err) {
-      console.error('Error in handleAddToCart:', err)
-      alert('Failed to add to cart. Please try again.')
-    }
+       const databaseStock = stockData.remaining_stock
+       const existingInCart = cartItems
+         .filter(item => item.product.id === id && item.date === selectedDate)
+         .reduce((sum, item) => sum + item.quantity, 0)
+
+       const maxCanAdd = databaseStock - existingInCart
+
+       if (maxCanAdd <= 0) {
+         alert(`Sold Out. You already have ${existingInCart} in cart.`)
+         return
+       }
+
+       if (quantity > maxCanAdd) {
+         alert(`You can only add ${maxCanAdd} more. You have ${existingInCart} in cart.`)
+         return
+       }
+
+       addToCart(product, selectedDate, quantity, databaseStock)
+     } catch (err) {
+       console.error('Error in handleAddToCart:', err)
+       alert('Failed to add to cart. Please try again.')
+     }
   }
 
   const now = new Date()
@@ -221,24 +230,21 @@ export default function Product() {
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-10 border-b border-[#F5F0E6]">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center">
           <Link to="/" className="text-[#1A237E] hover:text-[#E31E24] transition-colors flex items-center gap-2 font-bold font-display">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
             Back
           </Link>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-
+        
         {/* Product Image & Info Card */}
         <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F0E6] overflow-hidden">
-          {/* Image fills the entire width, no padding */}
           <div className="w-full bg-stone-100">
             {product.image_url ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="w-full h-auto object-contain"
-              />
+              <img src={product.image_url} alt={product.name} className="w-full h-auto object-contain" />
             ) : (
               <div className="w-full h-64 flex items-center justify-center text-stone-400">
                 <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,12 +253,11 @@ export default function Product() {
               </div>
             )}
           </div>
-
-          {/* Content below image */}
+          
           <div className="p-5">
             <h1 className="text-3xl font-bold text-[#1A237E] font-display">{product.name}</h1>
             <p className="text-[15px] text-gray-600 mt-4 mb-6 leading-[1.75] font-body">{product.description}</p>
-
+            
             <div className="mt-6 pt-6 border-t-2 border-[#F5F0E6] flex items-baseline justify-between">
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-[#E31E24] font-display">RM{Number(product.price).toFixed(2)}</span>
@@ -260,7 +265,6 @@ export default function Product() {
               </div>
             </div>
 
-            {/* Includes Free Seaweed Note */}
             <div className="mt-4 p-4 bg-gradient-to-r from-[#FDFBF7] to-[#F5F0E6] rounded-2xl border border-[#F5F0E6] flex items-center gap-3">
               <div className="w-10 h-10 bg-[#E31E24]/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-[#E31E24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,130 +279,131 @@ export default function Product() {
           </div>
         </div>
 
-        {/* Calendar Section */}
-        <div className="bg-white p-5 rounded-3xl shadow-xl border-2 border-[#F5F0E6]">
-          <h3 className="text-lg font-bold text-[#1A237E] mb-5 font-display">Select Delivery Date</h3>
-
-          <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={() => changeMonth(-1)}
-              className="p-2 rounded-full hover:bg-[#F5F0E6] text-[#1A237E] transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <h4 className="text-lg font-semibold text-[#1A237E] font-display">{monthName}</h4>
-            <button
-              onClick={() => changeMonth(1)}
-              className="p-2 rounded-full hover:bg-[#F5F0E6] text-[#1A237E] transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-gray-400 mb-3 font-display">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-              <div key={i}>{day}</div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`empty-${i}`}></div>
-            ))}
-
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1
-              const dateKey = formatDateKey(year, month, day)
-              const isPast = dateKey < today
-              const isToday = dateKey === today
-              const isAfter9AM = isToday && isKLTimeAfter9AM()
-              const hasStock = availableDates.includes(dateKey)
-              const stock = stockLevels[dateKey] || 0
-              const isSelectable = !isPast && !isAfter9AM && hasStock
-              const isSelected = dateKey === selectedDate
-
-              return (
-                <div
-                  key={dateKey}
-                  onClick={() => isSelectable && setSelectedDate(dateKey)}
-                  className={`
-                    aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-all font-display
-                    ${!isSelectable ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'cursor-pointer'}
-                    ${isSelected ? 'ring-2 ring-[#1A237E] ring-offset-2' : ''}
-                    ${isSelectable && stock >= 5 ? 'bg-[#1A237E] text-white hover:bg-[#1A237E]/90' : ''}
-                    ${isSelectable && stock < 5 ? 'bg-[#E31E24] text-white hover:bg-[#E31E24]/90' : ''}
-                  `}
-                >
-                  {day}
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs text-gray-500 font-body">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#1A237E]"></div>
-              <span>Available</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#E31E24]"></div>
-              <span>Low Stock</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gray-200"></div>
-              <span>Unavailable</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Quantity Section */}
-        {selectedDate && (
-          <div className="bg-white p-5 rounded-3xl shadow-xl border-2 border-[#F5F0E6] space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#1A237E] font-display">Quantity</h3>
-              <span className="text-sm font-medium text-[#1A237E] bg-[#1A237E]/10 px-3 py-1 rounded-full font-body">
-                {selectedDate}
-              </span>
+        {/* --- DESKTOP LAYOUT CHANGE: Flex Container for Calendar & Quantity --- */}
+        {/* flex-col = stacked on mobile. md:flex-row = side-by-side on desktop. */}
+        <div className="flex flex-col md:flex-row gap-6">
+          
+          {/* Calendar Section */}
+          {/* w-full on mobile. md:w-2/3 takes up 2/3 of the row on desktop. */}
+          <div className={`bg-white p-5 rounded-3xl shadow-xl border-2 border-[#F5F0E6] ${selectedDate ? 'w-full md:w-2/3' : 'w-full'}`}>
+            <h3 className="text-lg font-bold text-[#1A237E] mb-5 font-display">Select Delivery Date</h3>
+            
+            <div className="flex justify-between items-center mb-6">
+              <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-[#F5F0E6] text-[#1A237E] transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <h4 className="text-lg font-semibold text-[#1A237E] font-display">{monthName}</h4>
+              <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-[#F5F0E6] text-[#1A237E] transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              </button>
             </div>
 
-            <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#F5F0E6]">
-              {remainingStock > 0 ? (
-                <p className="text-gray-700 font-medium font-body">
-                  <span className="text-gray-500">Available:</span> <span className="text-[#E31E24] font-bold text-lg ml-1 font-display">{remainingStock} left</span>
-                </p>
-              ) : (
-                <p className="text-[#E31E24] font-bold font-display">Sold Out for this date.</p>
-              )}
-              {cartItems.some(item => item.product.id === id && item.date === selectedDate) && (
-                <p className="text-xs text-gray-500 mt-1 font-body">
-                  (You already have {cartItems.filter(i => i.product.id === id && i.date === selectedDate).reduce((s, i) => s + i.quantity, 0)} in your cart)
-                </p>
-              )}
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-gray-400 mb-3 font-display">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                <div key={i}>{day}</div>
+              ))}
             </div>
 
-            {remainingStock > 0 && (
-              <div className="flex items-center justify-between bg-[#FDFBF7] p-2 rounded-2xl border border-[#F5F0E6]">
-                <button
-                  type="button"
-                  onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
-                  disabled={quantity <= 1}
-                  className="w-12 h-12 rounded-xl bg-white border border-[#F5F0E6] text-[#1A237E] font-bold text-xl flex items-center justify-center hover:bg-[#F5F0E6] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm font-display"
-                >
-                  −
-                </button>
-                <span className="text-2xl font-bold text-[#1A237E] w-12 text-center font-display">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity(prev => Math.min(remainingStock, prev + 1))}
-                  disabled={quantity >= remainingStock}
-                  className="w-12 h-12 rounded-xl bg-[#E31E24] text-white font-bold text-xl flex items-center justify-center hover:bg-[#E31E24]/90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm font-display"
-                >
-                  +
-                </button>
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: firstDay }).map((_, i) => (
+                <div key={`empty-${i}`}></div>
+              ))}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1
+                const dateKey = formatDateKey(year, month, day)
+                const isPast = dateKey < today
+                const isToday = dateKey === today
+                const isAfter9AM = isToday && isKLTimeAfter9AM()
+                const hasStock = availableDates.includes(dateKey)
+                const stock = stockLevels[dateKey] || 0
+                const isSelectable = !isPast && !isAfter9AM && hasStock
+                const isSelected = dateKey === selectedDate
+
+                return (
+                  <div
+                    key={dateKey}
+                    onClick={() => isSelectable && setSelectedDate(dateKey)}
+                    className={`
+                      aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-all font-display
+                      ${!isSelectable ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'cursor-pointer'}
+                      ${isSelected ? 'ring-2 ring-[#1A237E] ring-offset-2' : ''}
+                      ${isSelectable && stock >= 5 ? 'bg-[#1A237E] text-white hover:bg-[#1A237E]/90' : ''}
+                      ${isSelectable && stock < 5 ? 'bg-[#E31E24] text-white hover:bg-[#E31E24]/90' : ''}
+                    `}
+                  >
+                    {day}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-4 mt-6 text-xs text-gray-500 font-body">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-[#1A237E]"></div>
+                <span>Available</span>
               </div>
-            )}
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-[#E31E24]"></div>
+                <span>Low Stock</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-gray-200"></div>
+                <span>Unavailable</span>
+              </div>
+            </div>
           </div>
-        )}
+
+          {/* Quantity Section */}
+          {/* Only renders if a date is selected. w-full on mobile, md:w-1/3 on desktop. */}
+          {selectedDate && (
+            <div className="w-full md:w-1/3 bg-white p-5 rounded-3xl shadow-xl border-2 border-[#F5F0E6] space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-[#1A237E] font-display">Quantity</h3>
+                <span className="text-sm font-medium text-[#1A237E] bg-[#1A237E]/10 px-3 py-1 rounded-full font-body">
+                  {selectedDate}
+                </span>
+              </div>
+
+              <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#F5F0E6]">
+                {remainingStock > 0 ? (
+                  <p className="text-gray-700 font-medium font-body">
+                    <span className="text-gray-500">Available:</span> 
+                    <span className="text-[#E31E24] font-bold text-lg ml-1 font-display">{remainingStock} left</span>
+                  </p>
+                ) : (
+                  <p className="text-[#E31E24] font-bold font-display">Sold Out for this date.</p>
+                )}
+                {cartItems.some(item => item.product.id === id && item.date === selectedDate) && (
+                  <p className="text-xs text-gray-500 mt-1 font-body">
+                    (You already have {cartItems.filter(i => i.product.id === id && i.date === selectedDate).reduce((s, i) => s + i.quantity, 0)} in your cart)
+                  </p>
+                )}
+              </div>
+
+              {remainingStock > 0 && (
+                <div className="flex items-center justify-between bg-[#FDFBF7] p-2 rounded-2xl border border-[#F5F0E6]">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(prev => Math.max(1, prev - 1))}
+                    disabled={quantity <= 1}
+                    className="w-12 h-12 rounded-xl bg-white border border-[#F5F0E6] text-[#1A237E] font-bold text-xl flex items-center justify-center hover:bg-[#F5F0E6] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm font-display"
+                  >
+                    −
+                  </button>
+                  <span className="text-2xl font-bold text-[#1A237E] w-12 text-center font-display">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(prev => Math.min(remainingStock, prev + 1))}
+                    disabled={quantity >= remainingStock}
+                    className="w-12 h-12 rounded-xl bg-[#E31E24] text-white font-bold text-xl flex items-center justify-center hover:bg-[#E31E24]/90 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm font-display"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Sticky Bottom Action Bar */}

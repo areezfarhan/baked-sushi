@@ -1,3 +1,6 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Dancing+Script:wght@400;500;600;700&family=Lato:wght@300;400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +8,12 @@
 @layer base {
   body {
     @apply font-body;
+    background-color: #FAF6F0;
+    /* TEST: Direct wood image, no gradient overlay */
+    background-image: url('/wood-texture.jpg');
+    background-attachment: fixed;
+    background-size: cover;
+    background-repeat: repeat;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -12,50 +21,148 @@
   }
 }
 
-/* Custom utility classes */
 @layer components {
+  /* Primary button - Forest green with gold hover */
   .btn-primary {
-    @apply bg-primary text-white font-semibold py-3 px-6 rounded-xl 
-           hover:bg-primary-dark transition-all duration-200 
-           active:scale-95 shadow-soft;
+    @apply bg-primary text-warm-50 font-display font-semibold 
+           py-3 px-8 rounded-xl
+           hover:bg-primary-light hover:shadow-warm
+           transition-all duration-300
+           active:scale-95 shadow-soft
+           border-2 border-transparent
+           focus:outline-none focus:ring-2 focus:ring-accent/50;
   }
   
+  /* Secondary button - Cream with green border */
   .btn-secondary {
-    @apply bg-warm-100 text-text-main font-semibold py-3 px-6 
-           rounded-xl hover:bg-warm-200 transition-all duration-200 
-           active:scale-95;
+    @apply bg-warm-100 text-primary font-display font-semibold 
+           py-3 px-8 rounded-xl
+           border-2 border-primary
+           hover:bg-warm-200 hover:shadow-soft
+           transition-all duration-300
+           active:scale-95
+           focus:outline-none focus:ring-2 focus:ring-primary/50;
   }
   
+  /* Accent button - Gold background */
+  .btn-accent {
+    @apply bg-accent text-warm-50 font-display font-semibold 
+           py-3 px-8 rounded-xl
+           hover:bg-accent-light hover:shadow-warm
+           transition-all duration-300
+           active:scale-95 shadow-soft
+           focus:outline-none focus:ring-2 focus:ring-accent/50;
+  }
+  
+  /* Input fields - Warm styling */
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-warm-200 
-           bg-white text-text-main placeholder:text-text-muted
-           focus:outline-none focus:ring-2 focus:ring-primary/50 
-           focus:border-primary transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-xl 
+           border-2 border-warm-300
+           bg-warm-50 
+           text-text-main 
+           placeholder:text-text-muted
+           focus:outline-none 
+           focus:ring-2 focus:ring-accent/30 
+           focus:border-accent 
+           transition-all duration-300
+           hover:border-warm-400;
+  }
+  
+  /* Card styling - Warm cream cards */
+  .card-warm {
+    @apply bg-warm-100 rounded-2xl 
+           shadow-soft 
+           border border-warm-200
+           hover:shadow-elevated 
+           hover:border-accent/30
+           transition-all duration-300;
+  }
+  
+  /* Decorative divider with leaf ornament */
+  .divider-ornament {
+    @apply flex items-center justify-center my-8;
+    
+    &::before,
+    &::after {
+      @apply content-[''] flex-1 h-px bg-gradient-to-r;
+    }
+    
+    &::before {
+      @apply from-transparent to-accent/50;
+    }
+    
+    &::after {
+      @apply from-accent/50 to-transparent;
+    }
+    
+    & .ornament {
+      @apply mx-4 text-accent text-xl;
+    }
+  }
+  
+  /* Gold border card (like logo) */
+  .card-gold-border {
+    @apply rounded-2xl 
+           border-2 border-double 
+           border-primary 
+           bg-warm-100
+           shadow-soft
+           hover:shadow-elevated
+           transition-all duration-300;
+  }
+  
+  /* Script text styling */
+  .text-script {
+    @apply font-script text-accent;
+  }
+  
+  /* Status badges */
+  .badge-status {
+    @apply inline-flex items-center px-3 py-1 rounded-full 
+           text-sm font-semibold font-display
+           border-2;
+    
+    &.pending {
+      @apply bg-accent/10 text-status-pending border-accent/30;
+    }
+    
+    &.confirmed {
+      @apply bg-primary/10 text-status-confirmed border-primary/30;
+    }
+    
+    &.processing {
+      @apply bg-accent-light/20 text-status-processing border-accent-light/50;
+    }
+    
+    &.completed {
+      @apply bg-status-completed/10 text-status-completed border-status-completed/30;
+    }
+    
+    &.rejected {
+      @apply bg-status-rejected/10 text-status-rejected border-status-rejected/30;
+    }
+    
+    &.expired {
+      @apply bg-status-expired/10 text-status-expired border-status-expired/30;
+    }
   }
 }
 
+/* Custom Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(20px) scale(0.95);
   }
-  to { 
+  to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.2s ease-out;
-}
-
-.animate-slideUp {
-  animation: slideUp 0.3s ease-out;
 }
 
 @keyframes slideDown {
@@ -69,11 +176,6 @@
   }
 }
 
-.animate-slideDown {
-  animation: slideDown 0.3s ease-out;
-}
-
-/* Custom Animations for Floating WhatsApp */
 @keyframes float {
   0%, 100% {
     transform: translateY(0px);
@@ -83,15 +185,31 @@
   }
 }
 
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s ease-out;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out;
+}
+
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
 
-/* Ensure smooth entrance */
+/* Smooth entrance for floating WhatsApp button */
+.fixed.bottom-6.right-6 {
+  animation: slideInBottom 0.6s ease-out;
+}
+
 @keyframes slideInBottom {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
@@ -99,7 +217,20 @@
   }
 }
 
-/* Apply to the main button container if needed */
-.fixed.bottom-6.right-6 {
-  animation: slideInBottom 0.5s ease-out;
+/* Custom scrollbar to match theme */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F0E6;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #B8984A;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9A7F3A;
 }

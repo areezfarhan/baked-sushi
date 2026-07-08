@@ -24,7 +24,7 @@ export default function Menu() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchParams, setSearchParams] = useSearchParams()
-  
+
   // Get category from URL, default to 'sushi'
   const activeCategory = searchParams.get('category') || 'sushi'
 
@@ -56,10 +56,10 @@ export default function Menu() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6]">
       {/* HERO SECTION */}
-      <div className="max-w-4xl mx-auto px-4 pt-6 pb-8 md:pt-10 md:pb-12">
+      <div className="max-w-4xl mx-auto px-4 pt-6 pb-8 md:pt-10 md:pb-12 rounded-[2rem] md:rounded-[2.5rem]">
         <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border-4 border-[#F5F0E6] relative overflow-hidden">
           {/* Red & White Stripes at the very top of the box */}
-          <div className="absolute top-0 left-0 right-0 h-4 md:h-6 flex">
+          <div className="absolute top-0 left-0 right-0 h-4 md:h-6 flex rounded-t-[2rem] md:rounded-t-[2.5rem] overflow-hidden">
             {Array.from({ length: 50 }).map((_, i) => (
               <div
                 key={i}
@@ -67,7 +67,7 @@ export default function Menu() {
               ></div>
             ))}
           </div>
-          
+
           {/* Content Container */}
           <div className="pt-16 pb-12 px-6 md:pt-20 md:pb-16 md:px-10 flex flex-col items-center text-center justify-center min-h-[380px] md:min-h-[450px]">
             {/* Logo Container */}
@@ -78,17 +78,17 @@ export default function Menu() {
                 className="h-28 w-auto object-contain md:h-36"
               />
             </div>
-            
+
             {/* Badge */}
             <div className="inline-block bg-[#1A237E]/10 text-[#1A237E] px-5 py-1.5 rounded-full mb-6 font-bold text-xs md:text-sm border border-[#1A237E]/20 whitespace-nowrap">
               Made Fresh Daily • Order Before 9AM
             </div>
-            
+
             {/* Title */}
             <h1 className="text-5xl md:text-6xl font-bold text-[#1A237E] mb-4 md:mb-6 font-display tracking-tight h-16 md:h-24 flex items-center justify-center max-w-2xl mx-auto">
               {activeCategory === 'sushi' ? 'Sushi Bake' : 'Seasonal'}
             </h1>
-            
+
             {/* Subtitle */}
             <p className="text-base md:text-lg text-gray-600 max-w-md mx-auto font-body leading-relaxed px-4">
               {activeCategory === 'sushi'
@@ -104,21 +104,19 @@ export default function Menu() {
         <div className="bg-white rounded-full p-1.5 shadow-lg border-2 border-[#F5F0E6] flex">
           <button
             onClick={() => handleCategoryChange('sushi')}
-            className={`flex-1 py-3 px-6 rounded-full font-bold text-sm md:text-base transition-all duration-300 font-display ${
-              activeCategory === 'sushi'
+            className={`flex-1 py-3 px-6 rounded-full font-bold text-sm md:text-base transition-all duration-300 font-display ${activeCategory === 'sushi'
                 ? 'bg-[#1A237E] text-white shadow-md'
                 : 'bg-transparent text-gray-500 hover:text-[#1A237E]'
-            }`}
+              }`}
           >
             🍣 Sushi Bake
           </button>
           <button
             onClick={() => handleCategoryChange('seasonal')}
-            className={`flex-1 py-3 px-6 rounded-full font-bold text-sm md:text-base transition-all duration-300 font-display ${
-              activeCategory === 'seasonal'
+            className={`flex-1 py-3 px-6 rounded-full font-bold text-sm md:text-base transition-all duration-300 font-display ${activeCategory === 'seasonal'
                 ? 'bg-[#1A237E] text-white shadow-md'
                 : 'bg-transparent text-gray-500 hover:text-[#1A237E]'
-            }`}
+              }`}
           >
             🔥 Seasonal
           </button>
@@ -152,7 +150,7 @@ export default function Menu() {
               const proteinType = getProteinType(p.name)
               const proteinEmoji = proteinIcons[proteinType]
               const displayPrice = p.price;
-              
+
               return (
                 <Link
                   key={p.id}

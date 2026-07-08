@@ -10,7 +10,7 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF7]">
+    <div className="min-h-screen flex flex-col">
       {/* Simple, elegant Navbar */}
       <header className="bg-[#FDFBF7]/90 backdrop-blur-md sticky top-0 z-50 border-b border-[#F5F0E6]">
         <div className="max-w-5xl mx-auto px-4 py-3 md:py-4 flex justify-between items-center">

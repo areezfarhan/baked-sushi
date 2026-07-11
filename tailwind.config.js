@@ -9,7 +9,7 @@ export default {
       fontFamily: {
         'display': ['Playfair Display', 'serif'],
         'script': ['Dancing Script', 'cursive'],
-        'body': ['Lato', 'sans-serif'],
+        'body': ['Montserrat', 'sans-serif'],
       },
       colors: {
         // Primary colors from logo

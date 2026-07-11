@@ -52,7 +52,6 @@ export default function AdminInventory() {
 
       const formatted = productsData.map(product => {
         const baseStock = stockMap[product.id] ?? (product.category === 'seasonal' ? 0 : 10)
-
         if (product.variants && product.variants.length > 0) {
           // Read variant stock from stock_by_date, not from products.variants
           const variantStock = variantStockMap[product.id] || {}
@@ -72,6 +71,7 @@ export default function AdminInventory() {
           variants: null
         }
       })
+
       setProducts(formatted)
     } catch (error) {
       console.error('Error fetching inventory:', error)
@@ -174,13 +174,11 @@ export default function AdminInventory() {
       products.forEach(product => {
         if (product.variants && product.variants.length > 0) {
           const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0)
-
           // Create variant stock object
           const variantStockObj = {}
           product.variants.forEach(v => {
             variantStockObj[v.name] = v.stock
           })
-
           stockData.push({
             product_id: product.id,
             date: selectedDate,
@@ -188,7 +186,6 @@ export default function AdminInventory() {
             remaining_stock: totalStock,
             variant_stock: variantStockObj
           })
-
           productsToUpdate.push({
             id: product.id,
             variants: product.variants
@@ -270,37 +267,36 @@ export default function AdminInventory() {
   const seasonalProducts = products.filter(p => p.category === 'seasonal')
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] pb-24">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-warm-100 pb-24">
+      <header className="bg-warm-50/80 backdrop-blur-md sticky top-0 z-10 border-b border-warm-200">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Logo" className="h-9 w-auto object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-text-main">Inventory</h1>
-              <p className="text-sm text-gray-500">Manage daily stock levels</p>
+              <h1 className="text-xl font-bold text-primary font-display">Inventory</h1>
+              <p className="text-sm text-text-muted font-body">Manage daily stock levels</p>
             </div>
           </div>
         </div>
       </header>
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+        {/* Calendar Card */}
+        <div className="bg-warm-50 p-5 rounded-3xl shadow-soft border-2 border-warm-200">
           <div className="flex justify-between items-center mb-6">
-            <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-100 text-gray-700 transition-colors">
+            <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-warm-200 text-primary transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             </button>
-            <h3 className="text-lg font-bold text-gray-900">{monthName}</h3>
-            <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-100 text-gray-700 transition-colors">
+            <h3 className="text-lg font-bold text-primary font-display">{monthName}</h3>
+            <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-warm-200 text-primary transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>
-
-          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-gray-400 mb-3">
+          <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-text-muted mb-3 font-body">
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
               <div key={i}>{day}</div>
             ))}
           </div>
-
           <div className="grid grid-cols-7 gap-2">
             {Array.from({ length: firstDay }).map((_, i) => (
               <div key={`empty-${i}`}></div>
@@ -316,25 +312,29 @@ export default function AdminInventory() {
                   key={dateKey}
                   onClick={() => !isPast && setSelectedDate(dateKey)}
                   className={`
-                    aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-all
-                    ${isPast ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'cursor-pointer'}
-                    ${!isPast && isSelected ? 'ring-2 ring-[#1A237E] ring-offset-2' : ''}
-                    ${!isPast && isConfigured ? 'bg-green-500 text-white hover:bg-green-600' : !isPast && 'bg-gray-50 text-gray-700 hover:bg-gray-100'}
-                  `}
+                    aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-all font-body
+                    ${isPast ? 'bg-warm-200 text-text-light cursor-not-allowed' : 'cursor-pointer'}
+                    ${!isPast && isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-warm-50' : ''}
+                    ${!isPast && isConfigured ? 'bg-green-500 text-white hover:bg-green-600' : !isPast && 'bg-warm-100 text-text-body hover:bg-warm-200'}
+                    `}
                 >
                   {day}
                 </div>
               )
             })}
           </div>
-          <p className="text-xs text-gray-400 mt-4 text-center">🟢 Green days have stock configured</p>
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <p className="text-xs text-text-muted font-body">Days with stock configured</p>
+          </div>
         </div>
 
+        {/* Sushi Products */}
         {sushiProducts.length > 0 && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+          <div className="bg-warm-50 p-5 rounded-3xl shadow-soft border-2 border-warm-200">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">Sushi Bake</h3>
-              <span className="text-sm font-medium text-[#1A237E] bg-[#1A237E]/10 px-3 py-1 rounded-full">{selectedDate}</span>
+              <h3 className="text-lg font-bold text-primary font-display">Sushi Bake</h3>
+              <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full font-body">{selectedDate}</span>
             </div>
             <div className="space-y-3">
               {sushiProducts.map(product => (
@@ -353,11 +353,12 @@ export default function AdminInventory() {
           </div>
         )}
 
+        {/* Seasonal Products */}
         {seasonalProducts.length > 0 && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+          <div className="bg-warm-50 p-5 rounded-3xl shadow-soft border-2 border-warm-200">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">Seasonal Specials</h3>
-              <span className="text-sm font-medium text-[#1A237E] bg-[#1A237E]/10 px-3 py-1 rounded-full">{selectedDate}</span>
+              <h3 className="text-lg font-bold text-primary font-display">Seasonal Specials</h3>
+              <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full font-body">{selectedDate}</span>
             </div>
             <div className="space-y-3">
               {seasonalProducts.map(product => (
@@ -376,25 +377,47 @@ export default function AdminInventory() {
           </div>
         )}
 
-        <button onClick={handleSave} disabled={loading} className="w-full bg-[#1A237E] hover:bg-[#151a5c] text-white rounded-xl py-3.5 font-semibold mt-6 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-          {loading ? (<><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>Saving...</>) : ('Save Stock Levels')}
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="w-full bg-primary hover:bg-primary-dark text-warm-50 rounded-2xl py-4 font-semibold mt-6 flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-warm font-display"
+        >
+          {loading ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-warm-50"></div>
+              Saving...
+            </>
+          ) : (
+            'Save Stock Levels'
+          )}
         </button>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-20">
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-warm-50 border-t-2 border-warm-200 shadow-elevated z-20">
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center justify-around py-3">
-            <button onClick={() => navigate('/admin/dashboard')} className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 px-4 py-2 transition-colors">
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="flex flex-col items-center gap-1 text-text-muted hover:text-primary px-4 py-2 transition-colors"
+            >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-              <span className="text-xs font-medium">Dashboard</span>
+              <span className="text-xs font-medium font-body">Dashboard</span>
             </button>
-            <button onClick={() => navigate('/admin/history')} className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 px-4 py-2 transition-colors">
+            <button
+              onClick={() => navigate('/admin/history')}
+              className="flex flex-col items-center gap-1 text-text-muted hover:text-primary px-4 py-2 transition-colors"
+            >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <span className="text-xs font-medium">History</span>
+              <span className="text-xs font-medium font-body">History</span>
             </button>
-            <button onClick={() => navigate('/admin/inventory')} className="flex flex-col items-center gap-1 text-[#E31E24] px-4 py-2 border-t-2 border-[#E31E24] -mt-3 pt-3">
+            <button
+              onClick={() => navigate('/admin/inventory')}
+              className="flex flex-col items-center gap-1 text-primary px-4 py-2 border-t-2 border-primary -mt-3 pt-3"
+            >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-              <span className="text-xs font-medium">Inventory</span>
+              <span className="text-xs font-medium font-body">Inventory</span>
             </button>
           </div>
         </div>
@@ -409,19 +432,19 @@ function ProductRow({ product, handleStockChange, handleVariantStockChange, incr
   const hasVariants = product.variants && product.variants.length > 0
 
   return (
-    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-      <div className="font-medium text-gray-900 mb-3">{product.name}</div>
+    <div className="p-4 bg-warm-100 rounded-2xl border border-warm-200">
+      <div className="font-medium text-text-main mb-3 font-display">{product.name}</div>
 
       {hasVariants ? (
-        <div className="space-y-2 pl-4 border-l-2 border-gray-300">
+        <div className="space-y-2 pl-4 border-l-2 border-warm-200">
           {product.variants.map(variant => (
             <div key={variant.name} className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">{variant.name}</span>
-              <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+              <span className="text-sm text-text-body font-body">{variant.name}</span>
+              <div className="flex items-center gap-2 bg-warm-50 rounded-xl border border-warm-200 p-1 shadow-soft">
                 <button
                   type="button"
                   onClick={() => decrementVariantStock(product.id, variant.name)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors font-bold text-lg"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-warm-50 border border-warm-200 text-primary hover:bg-warm-200 transition-colors font-bold text-lg font-display"
                 >
                   -
                 </button>
@@ -430,12 +453,12 @@ function ProductRow({ product, handleStockChange, handleVariantStockChange, incr
                   min="0"
                   value={variant.stock}
                   onChange={(e) => handleVariantStockChange(product.id, variant.name, e.target.value)}
-                  className="w-12 text-center p-1 rounded-md bg-transparent focus:ring-0 outline-none font-semibold text-gray-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-12 text-center p-1 rounded-lg bg-transparent focus:ring-0 outline-none font-semibold text-text-main font-display [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   type="button"
                   onClick={() => incrementVariantStock(product.id, variant.name)}
-                  className="w-8 h-8 flex items-center justify-center rounded-md bg-[#1A237E] text-white hover:bg-[#151a5c] transition-colors font-bold text-lg"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-warm-50 hover:bg-primary-dark transition-colors font-bold text-lg font-display"
                 >
                   +
                 </button>
@@ -445,12 +468,12 @@ function ProductRow({ product, handleStockChange, handleVariantStockChange, incr
         </div>
       ) : (
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">Stock Level</span>
-          <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+          <span className="text-sm text-text-muted font-body">Stock Level</span>
+          <div className="flex items-center gap-2 bg-warm-50 rounded-xl border border-warm-200 p-1 shadow-soft">
             <button
               type="button"
               onClick={() => decrementStock(product.id)}
-              className="w-8 h-8 flex items-center justify-center rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors font-bold text-lg"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-warm-50 border border-warm-200 text-primary hover:bg-warm-200 transition-colors font-bold text-lg font-display"
             >
               -
             </button>
@@ -459,12 +482,12 @@ function ProductRow({ product, handleStockChange, handleVariantStockChange, incr
               min="0"
               value={product.baseStock}
               onChange={(e) => handleStockChange(product.id, e.target.value)}
-              className="w-12 text-center p-1 rounded-md bg-transparent focus:ring-0 outline-none font-semibold text-gray-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-12 text-center p-1 rounded-lg bg-transparent focus:ring-0 outline-none font-semibold text-text-main font-display [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <button
               type="button"
               onClick={() => incrementStock(product.id)}
-              className="w-8 h-8 flex items-center justify-center rounded-md bg-[#1A237E] text-white hover:bg-[#151a5c] transition-colors font-bold text-lg"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-warm-50 hover:bg-primary-dark transition-colors font-bold text-lg font-display"
             >
               +
             </button>

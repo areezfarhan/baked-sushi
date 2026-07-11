@@ -22,13 +22,13 @@ export default function AdminHistory() {
     setLoading(true)
     let query = supabase
       .from('orders')
-      // UPDATED: Select all columns from order_items (including variant and price)
       .select('*, order_items(*, products(*))')
       .neq('status', 'pending_verification')
 
     if (filter !== 'all') {
       query = query.eq('status', filter)
     }
+
     if (sortOption === 'newest') {
       query = query.order('created_at', { ascending: false })
     } else if (sortOption === 'oldest') {
@@ -38,6 +38,7 @@ export default function AdminHistory() {
     }
 
     const { data, error } = await query
+
     if (error) {
       console.error('Error fetching history:', error)
     } else {
@@ -90,13 +91,11 @@ export default function AdminHistory() {
       order.customer_name,
       order.phone,
       new Date(order.delivery_date).toLocaleDateString(),
-      // UPDATED: Include variant in CSV export
       order.order_items?.map(item => `${item.products?.name}${item.variant ? ` (${item.variant})` : ''} x${item.quantity}`).join(', ') || '',
       `RM${Number(order.total_amount).toFixed(2)}`,
       order.status,
       new Date(order.created_at).toLocaleString()
     ])
-    // ... rest of the CSV code remains the same
 
     const csvContent = [
       headers.join(','),
@@ -134,7 +133,6 @@ export default function AdminHistory() {
     switch (status) {
       case 'payment_confirmed': return 'bg-green-100 text-green-700 border-green-200'
       case 'rejected': return 'bg-red-100 text-red-700 border-red-200'
-      case 'expired': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
       default: return 'bg-gray-100 text-gray-700 border-gray-200'
     }
   }
@@ -153,25 +151,25 @@ export default function AdminHistory() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-warm-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1A237E] mx-auto mb-4"></div>
-          <p className="text-gray-700">Loading history...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-text-body">Loading history...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FDFBF7] via-[#FDFBF7] to-[#F5F0E6] pb-24">
+    <div className="min-h-screen bg-warm-100 pb-24">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+      <header className="bg-warm-50/80 backdrop-blur-md sticky top-0 z-10 border-b border-warm-200">
         <div className="max-w-5xl mx-auto px-4 md:px-8 py-4">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Logo" className="h-9 w-auto object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-[#1A237E] font-display">Order History</h1>
-              <p className="text-sm text-gray-500 font-body">{orders.length} order{orders.length !== 1 ? 's' : ''} found</p>
+              <h1 className="text-xl font-bold text-primary font-display">Order History</h1>
+              <p className="text-sm text-text-muted font-body">{orders.length} order{orders.length !== 1 ? 's' : ''} found</p>
             </div>
           </div>
         </div>
@@ -184,7 +182,7 @@ export default function AdminHistory() {
             <button
               onClick={exportToCSV}
               disabled={orders.length === 0}
-              className="flex-1 md:flex-none bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
+              className="flex-1 md:flex-none bg-warm-50 text-text-body border border-warm-200 hover:bg-warm-100 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors shadow-soft"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
               Export CSV
@@ -192,45 +190,45 @@ export default function AdminHistory() {
             <button
               onClick={handleClearAll}
               disabled={orders.length === 0}
-              className="flex-1 md:flex-none bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 md:flex-none bg-accent/5 text-accent border border-accent/20 hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               Clear All
             </button>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-4 w-full md:w-auto">
+          <div className="bg-warm-50 p-4 rounded-2xl shadow-soft border border-warm-200 flex items-center gap-4 w-full md:w-auto">
             <div className="bg-green-100 p-3 rounded-full">
               <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-text-muted uppercase tracking-wider">
                 {monthFilter === 'all' ? 'Total Lifetime Revenue' : `Revenue for ${monthFilter}`}
               </p>
-              <p className="text-xl font-bold text-gray-900">RM {totalRevenue.toFixed(2)}</p>
+              <p className="text-xl font-bold text-text-main">RM {totalRevenue.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+        <div className="bg-warm-50 p-4 rounded-2xl shadow-soft border border-warm-200 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Status</label>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Status</label>
             <div className="flex overflow-x-auto gap-2 pb-1 no-scrollbar">
               {[
                 { value: 'all', label: 'All Orders' },
                 { value: 'payment_confirmed', label: 'Confirmed' },
-                { value: 'rejected', label: 'Rejected' },
-                { value: 'expired', label: 'Expired' }
+                { value: 'rejected', label: 'Rejected' }
               ].map(status => (
                 <button
                   key={status.value}
                   onClick={() => setFilter(status.value)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${filter === status.value
-                    ? 'bg-[#1A237E] text-white shadow-md'
-                    : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
-                    }`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    filter === status.value
+                      ? 'bg-primary text-warm-50 shadow-md'
+                      : 'bg-warm-100 text-text-body border border-warm-200 hover:bg-warm-200'
+                  }`}
                 >
                   {status.label}
                 </button>
@@ -239,11 +237,11 @@ export default function AdminHistory() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Month</label>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Month</label>
               <select
                 value={monthFilter}
                 onChange={(e) => setMonthFilter(e.target.value)}
-                className="w-full text-sm px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#1A237E] focus:border-[#1A237E] outline-none bg-white text-gray-900"
+                className="w-full text-sm px-3 py-2 rounded-xl border border-warm-200 focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none bg-warm-50 text-text-main"
               >
                 <option value="all">All Months</option>
                 {availableMonths.map(month => (
@@ -252,11 +250,11 @@ export default function AdminHistory() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Sort By</label>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Sort By</label>
               <select
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value)}
-                className="w-full text-sm px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#1A237E] focus:border-[#1A237E] outline-none bg-white text-gray-900"
+                className="w-full text-sm px-3 py-2 rounded-xl border border-warm-200 focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none bg-warm-50 text-text-main"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -268,23 +266,23 @@ export default function AdminHistory() {
 
         {/* Orders Feed */}
         {orders.length === 0 ? (
-          <div className="bg-white p-12 rounded-2xl shadow-sm border border-gray-200 text-center">
-            <div className="text-6xl mb-4">📭</div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">No History Orders</h2>
-            <p className="text-gray-500 text-sm">Orders will appear here after approval, rejection, or expiry.</p>
+          <div className="bg-warm-50 p-12 rounded-2xl shadow-soft border border-warm-200 text-center">
+            <div className="text-6xl mb-4"></div>
+            <h2 className="text-xl font-bold text-text-main mb-2">No History Orders</h2>
+            <p className="text-text-muted text-sm">Orders will appear here after approval, rejection, or expiry.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {orders.map((order, index) => (
-              <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div key={order.id} className="bg-warm-50 rounded-2xl shadow-soft border-2 border-gray-300 overflow-hidden">
                 {/* Card Header */}
-                <div className="bg-gray-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                <div className="bg-primary/5 px-4 py-3 border-b border-warm-200 flex justify-between items-center">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 text-lg">{order.order_reference}</span>
-                      <span className="text-xs text-gray-400">#{index + 1}</span>
+                      <span className="font-bold text-primary text-lg">{order.order_reference}</span>
+                      <span className="text-xs text-text-muted">#{index + 1}</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-text-muted mt-1 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
@@ -299,11 +297,11 @@ export default function AdminHistory() {
                 <div className="p-4 space-y-4">
                   {/* Customer Info */}
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-[#1A237E]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{order.customer_name}</p>
+                      <p className="font-semibold text-text-main truncate">{order.customer_name}</p>
                       <a
                         href={`https://wa.me/${formatPhoneNumber(order.phone)}`}
                         target="_blank"
@@ -315,17 +313,25 @@ export default function AdminHistory() {
                       </a>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-gray-400">Delivery</p>
-                      <p className="text-sm font-medium text-gray-900">{new Date(order.delivery_date).toLocaleDateString('en-MY')}</p>
+                      <p className="text-xs text-text-muted">Delivery</p>
+                      <p className="text-sm font-medium text-text-main">{new Date(order.delivery_date).toLocaleDateString('en-MY')}</p>
                     </div>
+                  </div>
+
+                  {/* Delivery Type & Address */}
+                  <div className="flex items-center gap-2 text-sm text-text-body">
+                    <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-medium">{order.delivery_type === 'delivery' ? '🚚 Delivery' : '🏪 Pickup'}</span>
                   </div>
 
                   {/* Expandable Address Section */}
                   {order.delivery_type === 'delivery' && (
-                    <div className="pl-13">
+                    <div>
                       <button
                         onClick={() => toggleAddress(order.id)}
-                        className="text-xs text-[#1A237E] font-bold flex items-center gap-1 hover:underline transition-colors"
+                        className="text-xs text-primary font-bold flex items-center gap-1 hover:underline transition-colors"
                       >
                         {expandedOrder === order.id ? 'Hide Address' : 'View Address'}
                         <svg className={`w-3 h-3 transition-transform duration-200 ${expandedOrder === order.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,8 +339,8 @@ export default function AdminHistory() {
                         </svg>
                       </button>
                       {expandedOrder === order.id && (
-                        <div className="mt-2 p-3 bg-[#FDFBF7] rounded-xl border border-[#F5F0E6] text-sm text-gray-700 flex items-start gap-2 animate-fade-in">
-                          <svg className="w-4 h-4 text-[#E31E24] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="mt-2 p-3 bg-warm-100 rounded-xl border border-warm-200 text-sm text-text-body flex items-start gap-2 animate-fade-in">
+                          <svg className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
@@ -344,17 +350,29 @@ export default function AdminHistory() {
                     </div>
                   )}
 
-                  {/* Items - UPDATED to show Variant */}
-                  <div className="border-t border-gray-100 pt-3">
+                  {/* Customer Notes */}
+                  {order.notes && order.notes.trim() !== '' && (
+                    <div className="p-3 bg-accent/5 border border-accent/20 rounded-xl text-sm text-text-body flex items-start gap-2">
+                      <svg className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <div>
+                        <p className="font-semibold text-text-main text-xs mb-1">Customer Notes:</p>
+                        <p className="leading-relaxed">{order.notes}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Items */}
+                  <div className="border-t border-warm-200 pt-3">
                     <div className="space-y-1">
                       {order.order_items && order.order_items.map((item, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
-                          {/* UPDATED: Show variant in parentheses if it exists */}
-                          <span className="text-gray-600">
+                          <span className="text-text-body">
                             {item.products?.name}
-                            {item.variant && <span className="text-gray-400 text-xs ml-1">({item.variant})</span>}
+                            {item.variant && <span className="text-text-muted text-xs ml-1">({item.variant})</span>}
                           </span>
-                          <span className="font-medium text-gray-900">x{item.quantity}</span>
+                          <span className="font-medium text-text-main">x{item.quantity}</span>
                         </div>
                       ))}
                     </div>
@@ -362,13 +380,13 @@ export default function AdminHistory() {
 
                   {/* Total & Delete Action */}
                   <div className="flex justify-between items-center pt-2">
-                    <div className="bg-gray-50 rounded-xl px-4 py-2 border border-gray-100">
-                      <span className="text-xs text-gray-500 block">Total</span>
-                      <span className="text-xl font-bold text-[#1A237E]">RM{Number(order.total_amount).toFixed(2)}</span>
+                    <div className="bg-warm-100 rounded-xl px-4 py-2 border border-warm-200">
+                      <span className="text-xs text-text-muted block">Total</span>
+                      <span className="text-xl font-bold text-accent">RM{Number(order.total_amount).toFixed(2)}</span>
                     </div>
                     <button
                       onClick={() => handleDelete(order.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                      className="text-accent hover:text-accent-dark hover:bg-accent/10 p-2 rounded-lg transition-colors"
                       title="Delete Order"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -382,12 +400,12 @@ export default function AdminHistory() {
       </div>
 
       {/* Sticky Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-20">
+      <nav className="fixed bottom-0 left-0 right-0 bg-warm-50 border-t border-warm-200 shadow-elevated z-20">
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center justify-around py-3">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 px-4 py-2 transition-colors"
+              className="flex flex-col items-center gap-1 text-text-muted hover:text-primary px-4 py-2 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -396,7 +414,7 @@ export default function AdminHistory() {
             </button>
             <button
               onClick={() => navigate('/admin/history')}
-              className="flex flex-col items-center gap-1 text-[#E31E24] px-4 py-2 border-t-2 border-[#E31E24] -mt-3 pt-3"
+              className="flex flex-col items-center gap-1 text-primary px-4 py-2 border-t-2 border-primary -mt-3 pt-3"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -405,7 +423,7 @@ export default function AdminHistory() {
             </button>
             <button
               onClick={() => navigate('/admin/inventory')}
-              className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 px-4 py-2 transition-colors"
+              className="flex flex-col items-center gap-1 text-text-muted hover:text-primary px-4 py-2 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
